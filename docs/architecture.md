@@ -253,17 +253,59 @@ DuckLake) is the spine of the production argument: embedded DuckDB's limitation 
 not speed but the **access pattern** — single read-write process, vertical-only,
 batch-not-stream. ClickHouse is built for concurrent streaming ingest + serving.
 
-**Benchmark plan:** simulator generates 1M events → load into each adapter → run
-the supported queries × N iterations → report p50/p95 latency + on-disk size. That
-table goes here once measured.
+### Benchmark results (1M events, local, 12 iterations)
 
-**Scaling path (to fill with reasoning):** 1M → DuckDB trivially; 10M → both
-sub-second single node, DuckDB sweet spot; 100M → both viable single node (CH
-~148ms vs DuckDB ~348ms on ClickBench-class workloads); 1B → ClickHouse clustered
-wins by orders of magnitude, DuckDB runs but multi-user serving strains → either CH
-or DuckGres/DuckLake decoupled storage. **10B:** Kafka shock-absorber in front of
-CH is mandatory (the API can't write to the DB synchronously); hot recent data in
-CH + cold history as Parquet in S3 (TTL-aged) keeps the disk bill sane.
+Generated 1,000,007 events / 77,765 traces, bulk-loaded into each engine, ran the
+supported-query catalog. Reproduce: `pnpm --filter @ata/bench bench --events 1000000`.
+
+| Query | level | DuckDB p50 / p95 (ms) | ClickHouse p50 / p95 (ms) |
+| --- | --- | ---: | ---: |
+| Avg LLM latency by model over time | events | 11.9 / 17.3 | 42.0 / 46.1 |
+| Which tools fail the most | events | 9.0 / 11.5 | 24.8 / 29.6 |
+| Token usage by agent type | events | 6.0 / 8.7 | 27.4 / 30.4 |
+| Cost per successful run by model | runs | 18.6 / 25.7 | 57.1 / 67.5 |
+| Top 10 slowest traces | traces | 14.5 / 23.0 | 55.4 / 82.5 |
+| Error rate by tool name | events | 9.3 / 14.0 | 26.7 / 33.3 |
+| Number of runs per hour | events | 16.3 / 21.6 | 51.5 / 69.5 |
+| Avg steps per run by outcome | runs | 13.4 / 16.9 | 41.0 / 53.4 |
+| p95 LLM latency by model | events | 16.0 / 23.9 | 37.7 / 40.8 |
+
+| Metric | DuckDB | ClickHouse |
+| --- | ---: | ---: |
+| Bulk ingest throughput | 68k ev/s | **95k ev/s** |
+| On-disk size | 232 MB | **96 MB** |
+| Compression vs raw JSON | 2.05× | **4.94×** |
+| Query latency @1M | **faster (in-process)** | higher (HTTP + per-query overhead) |
+
+**The honest finding — and why it does NOT pick the production engine.** At 1M on a
+single node, **DuckDB is ~2–4× faster on queries** — it runs in-process, while every
+ClickHouse query pays an HTTP round-trip + fixed per-query overhead that dominates at
+this size (matches the literature: DuckDB wins below ~10 GB by avoiding client-server
+overhead). So if the 1M benchmark *were* the decision, it would pick DuckDB. It isn't —
+and that's the point: **the benchmark is a local correctness/parity + compression check,
+not the scaling decision.** The decision is made from the design target (§ below), where
+the levers that matter already show in ClickHouse's favor even at 1M: **2.4× smaller on
+disk, ~40% faster bulk ingest**, plus the things this benchmark can't exercise on a
+laptop — concurrent multi-tenant serving, horizontal scale, streaming ingest, and
+incremental MV rollups.
+
+### Decision: DuckDB embedded/local, ClickHouse for the 1B-events/day target
+
+The design parameter (from the cofounder) is **up to 1B events/day, ~4 KB/event,
+peak 10× average** → ~**11.6k events/s average, ~116k peak**, ~**4 TB/day raw**,
+~1.5 PB/year. Sizing the decision to that, not the 1M benchmark:
+
+- **1M (local/CI):** DuckDB — embedded, zero-ops, fastest in-process. Our default + benchmark engine.
+- **10M:** both sub-second single-node; DuckDB is the sweet spot.
+- **100M:** both viable single-node (ClickBench-class: CH ~148 ms vs DuckDB ~348 ms once concurrency/scan size grows); ClickHouse's compression + MV rollups start to matter.
+- **1B/day:** **ClickHouse, clustered.** DuckDB is structurally out — single read-write process, vertical-only, batch-not-stream (the DuckGres lesson: PostHog had to wrap it in the PG wire protocol + DuckLake to get production access patterns). At 116k peak eps you need concurrent streaming ingest + MV-served dashboards + horizontal scale — ClickHouse's home turf.
+- **10B/day:** Kafka/Redpanda shock-absorber is mandatory (the API can't write synchronously); **payload externalization to S3** (the 4 KB is mostly prompt/response text — keep ~200–400 B analytical rows in CH, 4 TB/day of payloads in cheap object storage); hot CH + cold Parquet, TTL-aged by day-partition.
+
+**DuckDB still earns its place at scale** via **federated joins** (its real DuckGres
+value): answer "cost per successful run for Pro-tier users" by joining cold trace
+Parquet in S3 with an *external* Postgres billing DB in ephemeral DuckDB compute —
+something ClickHouse-alone handles poorly. That's why the engine seam (and a DuckDB
+path) stays even when ClickHouse is the hot path.
 
 **Duckgres' real production value isn't embedded query — it's federated joins.**
 At scale the sharp use case is answering "cost per successful run for Pro-tier
