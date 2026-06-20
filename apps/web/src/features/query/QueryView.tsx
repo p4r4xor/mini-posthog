@@ -4,6 +4,7 @@
  * latency/engine/source/rowCount badge row) or, when the question isn't
  * supported, the rejection reason and the supported-question catalog.
  */
+import type { JSX } from "react";
 import { useState } from "react";
 import { runQuery } from "../../api-client/index.js";
 import type { QueryResponse } from "../../api-client/index.js";

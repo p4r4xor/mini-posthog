@@ -3,7 +3,7 @@
 #   docker compose up -d clickhouse
 services:
   clickhouse:
-    image: clickhouse/clickhouse-server:24.8
+    image: clickhouse/clickhouse-server:26.5
     container_name: ata-clickhouse
     ports:
       - "8123:8123" # HTTP (used by @clickhouse/client)

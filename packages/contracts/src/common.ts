@@ -35,12 +35,12 @@ export const TimeGrain = z.enum(TIME_GRAINS);
 export type TimeGrain = z.infer<typeof TimeGrain>;
 
 /** ISO-8601 timestamp with offset (e.g. "2026-05-07T09:12:30.123Z"). */
-export const IsoTimestamp = z.string().datetime({ offset: true });
+export const IsoTimestamp = z.iso.datetime({ offset: true });
 export type IsoTimestamp = z.infer<typeof IsoTimestamp>;
 
 /** A non-empty identifier string. */
 export const Id = z.string().min(1);
 
 /** Free-form metadata bag — the JSON tail of the wide-event model. */
-export const Metadata = z.record(z.unknown());
+export const Metadata = z.record(z.string(), z.unknown());
 export type Metadata = z.infer<typeof Metadata>;

@@ -3,6 +3,7 @@
  * State is intentionally tiny (which tab is active) — each feature owns its own
  * data fetching and local state.
  */
+import type { JSX } from "react";
 import { useState } from "react";
 import { QueryView } from "./features/query/QueryView.js";
 import { ExplorerView } from "./features/explorer/ExplorerView.js";

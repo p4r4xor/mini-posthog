@@ -21,6 +21,7 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
+import type { JSX } from "react";
 import type { CellValue, QueryResult, ResultColumn } from "../../api-client/index.js";
 
 /** A small palette cycled across series so multi-line/grouped charts stay legible. */

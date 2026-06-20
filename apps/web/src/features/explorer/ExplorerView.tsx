@@ -3,6 +3,7 @@
  * selected trace's detail (GET /traces/:id) on the right. Filters drive the list
  * fetch; clicking a row loads that trace's runs + event timeline.
  */
+import type { JSX } from "react";
 import { useEffect, useState } from "react";
 import { getTrace, listTraces } from "../../api-client/index.js";
 import type {

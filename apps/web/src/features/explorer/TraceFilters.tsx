@@ -3,6 +3,7 @@
  * (time range + agentName/model/toolName/status/userId). It owns no fetching —
  * it lifts the assembled params up to the parent on apply/reset.
  */
+import type { JSX, ReactNode } from "react";
 import { useState } from "react";
 import type { ListTracesParams } from "../../api-client/index.js";
 
@@ -135,7 +136,7 @@ export function TraceFilters({ onApply, loading }: TraceFiltersProps): JSX.Eleme
   );
 }
 
-function Field({ label, children }: { label: string; children: React.ReactNode }): JSX.Element {
+function Field({ label, children }: { label: string; children: ReactNode }): JSX.Element {
   return (
     <label className="field">
       <span className="field-label">{label}</span>

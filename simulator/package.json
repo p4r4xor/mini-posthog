@@ -12,6 +12,7 @@
     "@ata/sdk": "workspace:*"
   },
   "devDependencies": {
-    "tsx": "^4.19.2"
+    "@types/node": "^26.0.0",
+    "tsx": "^4.22.4"
   }
 }

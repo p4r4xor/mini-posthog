@@ -39,7 +39,10 @@ export class BatchQueue {
       void this.flush();
     }, this.config.flushIntervalMs);
     // Don't keep the Node process alive solely for the flush timer.
-    this.timer.unref?.();
+    // In Node the timer is a `Timeout` with `.unref()`; in the browser it's a
+    // numeric handle with no such method, so probe for the method at runtime.
+    const handle = this.timer as unknown as { unref?: () => void };
+    handle.unref?.();
   }
 
   /**

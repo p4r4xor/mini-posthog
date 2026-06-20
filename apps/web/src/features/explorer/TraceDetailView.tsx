@@ -3,6 +3,7 @@
  * are sorted by step index so the timeline reads in execution order; each entry
  * shows type, model/tool, status, latency and cost.
  */
+import type { JSX } from "react";
 import type { EventRow, RunSummary, TraceDetail } from "../../api-client/index.js";
 
 /** Compact ISO → local time for timeline rows. */
