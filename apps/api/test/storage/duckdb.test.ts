@@ -105,7 +105,7 @@ describe("DuckDBEventStore", () => {
       groupBy: [],
       where: [{ kind: "timeRange", column: "timestamp", ...TIME_RANGE }],
     };
-    const agg = await store.aggregate(countQuery);
+    const agg = await store.aggregate(countQuery, PROJECT);
     expect(agg.rows[0]!.value).toBe(10);
   });
 
@@ -121,7 +121,7 @@ describe("DuckDBEventStore", () => {
       ],
       orderBy: { ref: "value", dir: "desc" },
     };
-    const res = await store.aggregate(query);
+    const res = await store.aggregate(query, PROJECT);
     expect(res.engine).toBe("duckdb");
     expect(res.columns).toEqual([
       { name: "toolName", role: "dimension" },
@@ -144,7 +144,7 @@ describe("DuckDBEventStore", () => {
         { kind: "timeRange", column: "timestamp", ...TIME_RANGE },
       ],
     };
-    const res = await store.aggregate(query);
+    const res = await store.aggregate(query, PROJECT);
     const byModel = Object.fromEntries(res.rows.map((r) => [r.model, r.value]));
     expect(byModel["gpt-5.2"]).toBe(800);
     expect(byModel["claude-4.5"]).toBe(1500);
@@ -158,7 +158,7 @@ describe("DuckDBEventStore", () => {
       groupBy: [],
       where: [{ kind: "timeRange", column: "timestamp", ...TIME_RANGE }],
     };
-    const res = await store.aggregate(query);
+    const res = await store.aggregate(query, PROJECT);
     expect(res.rows).toHaveLength(1);
     // p95 of all event latencies (800,1200,600,900,1500,...) is a finite number
     // near the top of the range; assert it's numeric and within bounds.
@@ -176,7 +176,7 @@ describe("DuckDBEventStore", () => {
       groupBy: [{ kind: "column", column: "model", alias: "model" }],
       where: [],
     };
-    const res = await store.aggregate(query);
+    const res = await store.aggregate(query, PROJECT);
     const byModel = Object.fromEntries(res.rows.map((r) => [r.model, r.value]));
     // run_1 primary_model = gpt-5.2 (last non-null model), cost = 0.014
     // run_2 primary_model = claude-4.5, cost = 0.05
@@ -200,7 +200,7 @@ describe("DuckDBEventStore", () => {
         { kind: "timeRange", column: "timestamp", ...TIME_RANGE },
       ],
     };
-    const res = await store.aggregate(query);
+    const res = await store.aggregate(query, PROJECT);
     const byTool = Object.fromEntries(res.rows.map((r) => [r.toolName, r.value]));
     // web_fetch: 1 error (failed) of 1 → 1.0 ; code_exec: 1 failed of 1 → 1.0
     // web_search: 0 failed of 1 → 0
@@ -217,7 +217,7 @@ describe("DuckDBEventStore", () => {
       where: [{ kind: "timeRange", column: "timestamp", ...TIME_RANGE }],
       orderBy: { ref: "bucket", dir: "asc" },
     };
-    const res = await store.aggregate(query);
+    const res = await store.aggregate(query, PROJECT);
     expect(res.columns[0]).toEqual({ name: "bucket", role: "time" });
     // Both runs on the same day → 2 distinct runIds in one bucket.
     expect(res.rows).toHaveLength(1);

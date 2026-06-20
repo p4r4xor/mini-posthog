@@ -45,21 +45,14 @@ export class QueryService {
 
     const compiled: CompiledQuery = compilePlan(plan.plan);
 
-    // Tenancy: scope every query to the caller's project. Logical column name —
-    // the adapter maps it to the physical column.
-    compiled.where.push({
-      kind: "compare",
-      column: "projectId",
-      op: "eq",
-      value: opts.projectId,
-    });
-
     // Apply caller limit only when the plan didn't specify one.
     if (opts.limit !== undefined && compiled.limit === undefined) {
       compiled.limit = opts.limit;
     }
 
-    const agg = await this.store.aggregate(compiled);
+    // Tenancy is enforced by the store (aggregate requires a projectId), so it
+    // cannot be forgotten on any query path.
+    const agg = await this.store.aggregate(compiled, opts.projectId);
 
     const result: QueryResult = {
       columns: agg.columns,

@@ -186,8 +186,12 @@ export interface EventStore {
   init(): Promise<void>;
   /** Insert a batch of rows; idempotent by eventId. */
   insertBatch(rows: EventRow[]): Promise<InsertResult>;
-  /** Execute a compiled analytics query. */
-  aggregate(query: CompiledQuery): Promise<AggregateResult>;
+  /**
+   * Execute a compiled analytics query, scoped to a project. Tenant scoping is a
+   * REQUIRED argument (not an injectable predicate the caller might forget): the
+   * adapter always constrains to `projectId`, so cross-tenant leaks aren't possible.
+   */
+  aggregate(query: CompiledQuery, projectId: string): Promise<AggregateResult>;
   /** List traces for the explorer. */
   listTraces(filter: TraceFilter): Promise<TraceSummary[]>;
   /** Fetch one trace with its runs + event timeline. */

@@ -24,3 +24,18 @@ export const STORAGE_ENGINE: StorageEngine =
   process.env.ATA_ENGINE === "clickhouse" ? "clickhouse" : "duckdb";
 
 export const API_PORT = Number(process.env.ATA_PORT ?? 3000);
+
+/** ClickHouse connection (matches docker-compose.yml; overridable via env). */
+export interface ClickHouseConfig {
+  url: string;
+  username: string;
+  password: string;
+  database: string;
+}
+
+export const CLICKHOUSE_CONFIG: ClickHouseConfig = {
+  url: process.env.ATA_CH_URL ?? "http://localhost:8123",
+  username: process.env.ATA_CH_USER ?? "ata",
+  password: process.env.ATA_CH_PASSWORD ?? "ata",
+  database: process.env.ATA_CH_DATABASE ?? "ata",
+};

@@ -125,9 +125,18 @@ export class DuckDBEventStore implements EventStore {
     return Number(rows[0]?.n ?? 0);
   }
 
-  async aggregate(query: CompiledQuery): Promise<AggregateResult> {
+  async aggregate(query: CompiledQuery, projectId: string): Promise<AggregateResult> {
     const conn = this.conn();
-    const { sql, params } = renderAggregate(query);
+    // Tenant scoping is enforced here, always — prepend a projectId predicate so
+    // no query path can accidentally read across projects.
+    const scoped: CompiledQuery = {
+      ...query,
+      where: [
+        { kind: "compare", column: "projectId", op: "eq", value: projectId },
+        ...query.where,
+      ],
+    };
+    const { sql, params } = renderAggregate(scoped);
 
     const start = performance.now();
     const reader = await conn.runAndReadAll(sql, params as never[]);
