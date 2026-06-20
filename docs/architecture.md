@@ -45,7 +45,7 @@ object storage (documented). These are intentional — see §13.
 
 ---
 
-## 2. Open questions (sent to assignment-giver; we proceed on defaults)
+## 2. Open questions (sent to assignment-giver by Aniketh; we proceed on defaults)
 
 None of these block work; each has a documented default we ship if unanswered.
 
