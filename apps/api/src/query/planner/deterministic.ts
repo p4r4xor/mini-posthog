@@ -24,16 +24,12 @@ function normalize(nl: string): string {
 
 /** True if every token/regex in `needles` is present in the normalized text. */
 function has(text: string, ...needles: (string | RegExp)[]): boolean {
-  return needles.every((n) =>
-    typeof n === "string" ? text.includes(n) : n.test(text),
-  );
+  return needles.every((n) => (typeof n === "string" ? text.includes(n) : n.test(text)));
 }
 
 /** True if any of the alternatives is present. */
 function hasAny(text: string, ...needles: (string | RegExp)[]): boolean {
-  return needles.some((n) =>
-    typeof n === "string" ? text.includes(n) : n.test(text),
-  );
+  return needles.some((n) => (typeof n === "string" ? text.includes(n) : n.test(text)));
 }
 
 type Template = (text: string, ctx: PlanContext) => QueryPlan | null;
@@ -48,7 +44,7 @@ const percentileLatency: Template = (text, ctx) => {
 
   let p: number | null = null;
   const m = text.match(/\bp(\d{2,3})\b/) ?? text.match(/(\d{2,3})th percentile/);
-  if (m && m[1]) {
+  if (m?.[1]) {
     const n = Number(m[1]);
     if (n > 0 && n < 100) p = n / 100;
   } else if (hasAny(text, "median")) {
@@ -84,7 +80,14 @@ const percentileLatency: Template = (text, ctx) => {
 const avgLlmLatencyByModelOverTime: Template = (text, ctx) => {
   const isLatency = hasAny(text, "latency", "latencies");
   const byModel = has(text, "model");
-  const overTime = hasAny(text, "over time", "time series", "timeseries", "trend", /per (hour|day|minute)/);
+  const overTime = hasAny(
+    text,
+    "over time",
+    "time series",
+    "timeseries",
+    "trend",
+    /per (hour|day|minute)/,
+  );
   if (isLatency && byModel && overTime) {
     return {
       level: "event",
@@ -102,7 +105,15 @@ const avgLlmLatencyByModelOverTime: Template = (text, ctx) => {
 /** Which tools fail the most / top failing tools → event, count, toolName, status=failed, count↓ 10, bar. */
 const topFailingTools: Template = (text, ctx) => {
   const aboutTools = has(text, "tool");
-  const aboutFailure = hasAny(text, "fail", "failing", "failures", "error", "errors", "broken");
+  const aboutFailure = hasAny(
+    text,
+    "fail",
+    "failing",
+    "failures",
+    "error",
+    "errors",
+    "broken",
+  );
   const ranking = hasAny(text, "most", "top", "worst", "which");
   if (aboutTools && aboutFailure && ranking) {
     return {
@@ -158,7 +169,14 @@ const costPerSuccessfulRunByModel: Template = (text, ctx) => {
 /** Top 10 slowest traces → trace, max(durationMs), no dims, dur↓ 10, table. */
 const slowestTraces: Template = (text, ctx) => {
   const aboutTraces = hasAny(text, "trace", "traces");
-  const slow = hasAny(text, "slow", "slowest", "longest", "slowest traces", /longest (running|duration)/);
+  const slow = hasAny(
+    text,
+    "slow",
+    "slowest",
+    "longest",
+    "slowest traces",
+    /longest (running|duration)/,
+  );
   if (aboutTraces && slow) {
     return {
       level: "trace",
@@ -201,7 +219,16 @@ const errorRateByTool: Template = (text, ctx) => {
 const runsPerHour: Template = (text, ctx) => {
   const aboutRuns = hasAny(text, "run", "runs");
   const perHour = hasAny(text, "per hour", "hourly", "by hour", "each hour");
-  const counting = hasAny(text, "number", "count", "how many", "volume", "throughput", "per hour", "hourly");
+  const counting = hasAny(
+    text,
+    "number",
+    "count",
+    "how many",
+    "volume",
+    "throughput",
+    "per hour",
+    "hourly",
+  );
   if (aboutRuns && perHour && counting) {
     return {
       level: "event",

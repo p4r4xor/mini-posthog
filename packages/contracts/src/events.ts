@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { EventStatus, Id, IsoTimestamp, Metadata } from "./common.js";
+import { Id, IsoTimestamp, Metadata } from "./common.js";
 
 /**
  * The wire DTO: what the SDK sends to `POST /capture`. This is the public

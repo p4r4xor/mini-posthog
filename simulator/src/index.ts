@@ -78,7 +78,9 @@ async function main(): Promise<void> {
     flushAt: args.flushAt,
     onProgress: (emitted, target) => {
       const pct = ((emitted / target) * 100).toFixed(1);
-      console.log(`[simulator] ${emitted.toLocaleString()} / ${target.toLocaleString()} (${pct}%)`);
+      console.log(
+        `[simulator] ${emitted.toLocaleString()} / ${target.toLocaleString()} (${pct}%)`,
+      );
     },
   });
 

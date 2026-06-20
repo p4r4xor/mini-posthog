@@ -190,10 +190,10 @@ export class RunImpl implements Run {
     const base: Metadata = { ...(metadata ?? {}) };
     if (this.ctx.tags) {
       const existing =
-        typeof base["tags"] === "object" && base["tags"] !== null
-          ? (base["tags"] as Record<string, unknown>)
+        typeof base.tags === "object" && base.tags !== null
+          ? (base.tags as Record<string, unknown>)
           : {};
-      base["tags"] = { ...this.ctx.tags, ...existing };
+      base.tags = { ...this.ctx.tags, ...existing };
     }
     return base;
   }

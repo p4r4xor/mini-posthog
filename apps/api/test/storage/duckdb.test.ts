@@ -1,11 +1,13 @@
-import { beforeEach, afterEach, describe, expect, it } from "vitest";
 import type { CompiledQuery, EventRow } from "@ata/contracts";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { DuckDBEventStore } from "../../src/storage/index.js";
 
 const PROJECT = "dev_project";
 
 /** Build an EventRow with sensible defaults; override per event. */
-function ev(partial: Partial<EventRow> & Pick<EventRow, "eventId" | "eventType">): EventRow {
+function ev(
+  partial: Partial<EventRow> & Pick<EventRow, "eventId" | "eventType">,
+): EventRow {
   return {
     traceId: "trace_1",
     runId: "run_1",
@@ -37,35 +39,113 @@ function ev(partial: Partial<EventRow> & Pick<EventRow, "eventId" | "eventType">
 function sampleEvents(): EventRow[] {
   return [
     // ---- trace_1 / run_1 ----
-    ev({ eventId: "e1", eventType: "run_started", stepIndex: 0, status: "running",
-      timestamp: "2026-05-07T09:00:00.000Z" }),
-    ev({ eventId: "e2", eventType: "llm_call", stepIndex: 1, model: "gpt-5.2",
-      status: "success", latencyMs: 800, inputTokens: 1200, outputTokens: 300,
-      costUsd: 0.014, timestamp: "2026-05-07T09:00:02.000Z" }),
-    ev({ eventId: "e3", eventType: "tool_call", stepIndex: 2, toolName: "web_search",
-      status: "success", latencyMs: 1200, timestamp: "2026-05-07T09:00:04.000Z" }),
-    ev({ eventId: "e4", eventType: "error", stepIndex: 3, toolName: "web_fetch",
-      status: "failed", errorType: "rate_limit", latencyMs: 600,
-      timestamp: "2026-05-07T09:00:07.000Z" }),
-    ev({ eventId: "e5", eventType: "retry", stepIndex: 4, toolName: "web_fetch",
-      status: "success", latencyMs: 900, timestamp: "2026-05-07T09:00:08.000Z" }),
-    ev({ eventId: "e6", eventType: "run_completed", stepIndex: 5, status: "success",
-      timestamp: "2026-05-07T09:00:12.000Z" }),
+    ev({
+      eventId: "e1",
+      eventType: "run_started",
+      stepIndex: 0,
+      status: "running",
+      timestamp: "2026-05-07T09:00:00.000Z",
+    }),
+    ev({
+      eventId: "e2",
+      eventType: "llm_call",
+      stepIndex: 1,
+      model: "gpt-5.2",
+      status: "success",
+      latencyMs: 800,
+      inputTokens: 1200,
+      outputTokens: 300,
+      costUsd: 0.014,
+      timestamp: "2026-05-07T09:00:02.000Z",
+    }),
+    ev({
+      eventId: "e3",
+      eventType: "tool_call",
+      stepIndex: 2,
+      toolName: "web_search",
+      status: "success",
+      latencyMs: 1200,
+      timestamp: "2026-05-07T09:00:04.000Z",
+    }),
+    ev({
+      eventId: "e4",
+      eventType: "error",
+      stepIndex: 3,
+      toolName: "web_fetch",
+      status: "failed",
+      errorType: "rate_limit",
+      latencyMs: 600,
+      timestamp: "2026-05-07T09:00:07.000Z",
+    }),
+    ev({
+      eventId: "e5",
+      eventType: "retry",
+      stepIndex: 4,
+      toolName: "web_fetch",
+      status: "success",
+      latencyMs: 900,
+      timestamp: "2026-05-07T09:00:08.000Z",
+    }),
+    ev({
+      eventId: "e6",
+      eventType: "run_completed",
+      stepIndex: 5,
+      status: "success",
+      timestamp: "2026-05-07T09:00:12.000Z",
+    }),
 
     // ---- trace_2 / run_2 ----
-    ev({ eventId: "f1", eventType: "run_started", traceId: "trace_2", runId: "run_2",
-      agentName: "coder-agent", userId: "user_7", stepIndex: 0, status: "running",
-      timestamp: "2026-05-07T10:00:00.000Z" }),
-    ev({ eventId: "f2", eventType: "llm_call", traceId: "trace_2", runId: "run_2",
-      agentName: "coder-agent", userId: "user_7", stepIndex: 1, model: "claude-4.5",
-      status: "success", latencyMs: 1500, inputTokens: 2000, outputTokens: 500,
-      costUsd: 0.05, timestamp: "2026-05-07T10:00:03.000Z" }),
-    ev({ eventId: "f3", eventType: "tool_call", traceId: "trace_2", runId: "run_2",
-      agentName: "coder-agent", userId: "user_7", stepIndex: 2, toolName: "code_exec",
-      status: "failed", latencyMs: 400, timestamp: "2026-05-07T10:00:05.000Z" }),
-    ev({ eventId: "f4", eventType: "run_completed", traceId: "trace_2", runId: "run_2",
-      agentName: "coder-agent", userId: "user_7", stepIndex: 3, status: "failed",
-      timestamp: "2026-05-07T10:00:09.000Z" }),
+    ev({
+      eventId: "f1",
+      eventType: "run_started",
+      traceId: "trace_2",
+      runId: "run_2",
+      agentName: "coder-agent",
+      userId: "user_7",
+      stepIndex: 0,
+      status: "running",
+      timestamp: "2026-05-07T10:00:00.000Z",
+    }),
+    ev({
+      eventId: "f2",
+      eventType: "llm_call",
+      traceId: "trace_2",
+      runId: "run_2",
+      agentName: "coder-agent",
+      userId: "user_7",
+      stepIndex: 1,
+      model: "claude-4.5",
+      status: "success",
+      latencyMs: 1500,
+      inputTokens: 2000,
+      outputTokens: 500,
+      costUsd: 0.05,
+      timestamp: "2026-05-07T10:00:03.000Z",
+    }),
+    ev({
+      eventId: "f3",
+      eventType: "tool_call",
+      traceId: "trace_2",
+      runId: "run_2",
+      agentName: "coder-agent",
+      userId: "user_7",
+      stepIndex: 2,
+      toolName: "code_exec",
+      status: "failed",
+      latencyMs: 400,
+      timestamp: "2026-05-07T10:00:05.000Z",
+    }),
+    ev({
+      eventId: "f4",
+      eventType: "run_completed",
+      traceId: "trace_2",
+      runId: "run_2",
+      agentName: "coder-agent",
+      userId: "user_7",
+      stepIndex: 3,
+      status: "failed",
+      timestamp: "2026-05-07T10:00:09.000Z",
+    }),
   ];
 }
 
@@ -106,7 +186,7 @@ describe("DuckDBEventStore", () => {
       where: [{ kind: "timeRange", column: "timestamp", ...TIME_RANGE }],
     };
     const agg = await store.aggregate(countQuery, PROJECT);
-    expect(agg.rows[0]!.value).toBe(10);
+    expect(agg.rows[0]?.value).toBe(10);
   });
 
   it("aggregates count by toolName (event grain)", async () => {
@@ -213,7 +293,9 @@ describe("DuckDBEventStore", () => {
     const query: CompiledQuery = {
       source: "events",
       metric: { kind: "count_distinct", column: "runId", alias: "value" },
-      groupBy: [{ kind: "timeBucket", column: "timestamp", grain: "day", alias: "bucket" }],
+      groupBy: [
+        { kind: "timeBucket", column: "timestamp", grain: "day", alias: "bucket" },
+      ],
       where: [{ kind: "timeRange", column: "timestamp", ...TIME_RANGE }],
       orderBy: { ref: "bucket", dir: "asc" },
     };
@@ -221,8 +303,8 @@ describe("DuckDBEventStore", () => {
     expect(res.columns[0]).toEqual({ name: "bucket", role: "time" });
     // Both runs on the same day → 2 distinct runIds in one bucket.
     expect(res.rows).toHaveLength(1);
-    expect(res.rows[0]!.value).toBe(2);
-    expect(typeof res.rows[0]!.bucket).toBe("string");
+    expect(res.rows[0]?.value).toBe(2);
+    expect(typeof res.rows[0]?.bucket).toBe("string");
   });
 
   it("listTraces returns trace summaries", async () => {
@@ -240,18 +322,21 @@ describe("DuckDBEventStore", () => {
     expect(t2.outcome).toBe("failed");
 
     // Filter by agentName.
-    const onlyCoder = await store.listTraces({ projectId: PROJECT, agentName: "coder-agent" });
+    const onlyCoder = await store.listTraces({
+      projectId: PROJECT,
+      agentName: "coder-agent",
+    });
     expect(onlyCoder).toHaveLength(1);
-    expect(onlyCoder[0]!.traceId).toBe("trace_2");
+    expect(onlyCoder[0]?.traceId).toBe("trace_2");
   });
 
   it("getTrace returns detail with events ordered by step_index", async () => {
     await store.insertBatch(sampleEvents());
     const detail = await store.getTrace(PROJECT, "trace_1");
     expect(detail).not.toBeNull();
-    expect(detail!.traceId).toBe("trace_1");
-    expect(detail!.runs).toHaveLength(1);
-    const run = detail!.runs[0]!;
+    expect(detail?.traceId).toBe("trace_1");
+    expect(detail?.runs).toHaveLength(1);
+    const run = detail!.runs[0];
     expect(run.runId).toBe("run_1");
     expect(run.outcome).toBe("success");
     expect(run.primaryModel).toBe("gpt-5.2");
@@ -260,11 +345,11 @@ describe("DuckDBEventStore", () => {
     expect(run.retryCount).toBe(1);
     expect(run.computeMs).toBe(800 + 1200 + 600 + 900);
 
-    expect(detail!.events).toHaveLength(6);
-    const stepIndices = detail!.events.map((e) => e.stepIndex);
+    expect(detail?.events).toHaveLength(6);
+    const stepIndices = detail?.events.map((e) => e.stepIndex);
     expect(stepIndices).toEqual([0, 1, 2, 3, 4, 5]);
     // metadata round-trips.
-    expect(detail!.events[0]!.eventType).toBe("run_started");
+    expect(detail?.events[0]?.eventType).toBe("run_started");
   });
 
   it("getTrace returns null for unknown trace", async () => {

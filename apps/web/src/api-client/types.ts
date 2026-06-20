@@ -3,23 +3,19 @@
  * the backend wraps responses in (these envelopes live at the API boundary, not
  * in @ata/contracts, so we model them here).
  */
-import type {
-  QueryResult,
-  TraceSummary,
-  TraceDetail,
-} from "@ata/contracts";
+import type { QueryResult } from "@ata/contracts";
 
 export type {
-  QueryResult,
-  ResultColumn,
   CellValue,
-  ColumnRole,
-  QueryResultMeta,
   ChartHint,
-  TraceSummary,
-  TraceDetail,
-  RunSummary,
+  ColumnRole,
   EventRow,
+  QueryResult,
+  QueryResultMeta,
+  ResultColumn,
+  RunSummary,
+  TraceDetail,
+  TraceSummary,
 } from "@ata/contracts";
 
 /** Request body for `POST /query`. */

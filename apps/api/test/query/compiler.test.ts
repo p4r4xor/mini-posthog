@@ -1,7 +1,6 @@
-import { describe, it, expect } from "vitest";
-import { z } from "zod";
-import { QueryPlan as QueryPlanSchema } from "@ata/contracts";
-import type { CompiledPredicate } from "@ata/contracts";
+import type { CompiledPredicate, QueryPlan as QueryPlanSchema } from "@ata/contracts";
+import { describe, expect, it } from "vitest";
+import type { z } from "zod";
 import { compilePlan, deriveChartHint } from "../../src/query/compiler/index.js";
 
 /**
@@ -39,13 +38,23 @@ describe("compilePlan — §9 catalog", () => {
     const q = compilePlan(plan);
 
     expect(q.source).toBe("events");
-    expect(q.metric).toEqual({ kind: "simple", fn: "avg", column: "latencyMs", alias: "value" });
+    expect(q.metric).toEqual({
+      kind: "simple",
+      fn: "avg",
+      column: "latencyMs",
+      alias: "value",
+    });
     expect(q.groupBy).toEqual([
       { kind: "column", column: "model", alias: "model" },
       { kind: "timeBucket", column: "timestamp", grain: "hour", alias: "bucket" },
     ]);
     // where contains the eventType compare AND the always-present timeRange.
-    expect(q.where).toContainEqual({ kind: "compare", column: "eventType", op: "eq", value: "llm_call" });
+    expect(q.where).toContainEqual({
+      kind: "compare",
+      column: "eventType",
+      op: "eq",
+      value: "llm_call",
+    });
     expect(timeRangePredicate(q.where)).toEqual({
       kind: "timeRange",
       column: "timestamp",
@@ -76,7 +85,9 @@ describe("compilePlan — §9 catalog", () => {
     expect(q.metric).toEqual({ kind: "count", alias: "value" });
     // count metric produces NO column.
     expect("column" in q.metric).toBe(false);
-    expect(q.groupBy).toEqual([{ kind: "column", column: "toolName", alias: "toolName" }]);
+    expect(q.groupBy).toEqual([
+      { kind: "column", column: "toolName", alias: "toolName" },
+    ]);
     expect(q.orderBy).toEqual({ ref: "value", dir: "desc" });
     expect(q.limit).toBe(10);
     expect(timeRangePredicate(q.where)).toBeDefined();
@@ -93,10 +104,19 @@ describe("compilePlan — §9 catalog", () => {
     const q = compilePlan(plan);
 
     expect(q.source).toBe("events");
-    expect(q.metric).toEqual({ kind: "simple", fn: "sum", column: "totalTokens", alias: "value" });
-    expect(q.groupBy).toEqual([{ kind: "column", column: "agentName", alias: "agentName" }]);
+    expect(q.metric).toEqual({
+      kind: "simple",
+      fn: "sum",
+      column: "totalTokens",
+      alias: "value",
+    });
+    expect(q.groupBy).toEqual([
+      { kind: "column", column: "agentName", alias: "agentName" },
+    ]);
     // No filters → where is exactly the timeRange predicate.
-    expect(q.where).toEqual([{ kind: "timeRange", column: "timestamp", from: FROM, to: TO }]);
+    expect(q.where).toEqual([
+      { kind: "timeRange", column: "timestamp", from: FROM, to: TO },
+    ]);
     expect(q.orderBy).toBeUndefined();
   });
 
@@ -112,9 +132,19 @@ describe("compilePlan — §9 catalog", () => {
     const q = compilePlan(plan);
 
     expect(q.source).toBe("runs");
-    expect(q.metric).toEqual({ kind: "simple", fn: "avg", column: "costUsd", alias: "value" });
+    expect(q.metric).toEqual({
+      kind: "simple",
+      fn: "avg",
+      column: "costUsd",
+      alias: "value",
+    });
     expect(q.groupBy).toEqual([{ kind: "column", column: "model", alias: "model" }]);
-    expect(q.where).toContainEqual({ kind: "compare", column: "status", op: "eq", value: "success" });
+    expect(q.where).toContainEqual({
+      kind: "compare",
+      column: "status",
+      op: "eq",
+      value: "success",
+    });
     expect(timeRangePredicate(q.where)).toBeDefined();
   });
 
@@ -134,7 +164,12 @@ describe("compilePlan — §9 catalog", () => {
     const q = compilePlan(plan);
 
     expect(q.source).toBe("traces");
-    expect(q.metric).toEqual({ kind: "simple", fn: "max", column: "durationMs", alias: "value" });
+    expect(q.metric).toEqual({
+      kind: "simple",
+      fn: "max",
+      column: "durationMs",
+      alias: "value",
+    });
     expect(q.groupBy).toEqual([]);
     expect(q.orderBy).toEqual({ ref: "value", dir: "desc" });
     expect(q.limit).toBe(10);
@@ -165,7 +200,9 @@ describe("compilePlan — §9 catalog", () => {
       numerator: [{ kind: "compare", column: "status", op: "eq", value: "failed" }],
       denominator: [],
     });
-    expect(q.groupBy).toEqual([{ kind: "column", column: "toolName", alias: "toolName" }]);
+    expect(q.groupBy).toEqual([
+      { kind: "column", column: "toolName", alias: "toolName" },
+    ]);
     expect(timeRangePredicate(q.where)).toBeDefined();
   });
 
@@ -182,7 +219,9 @@ describe("compilePlan — §9 catalog", () => {
 
     expect(q.source).toBe("events");
     expect(q.metric).toEqual({ kind: "count_distinct", column: "runId", alias: "value" });
-    expect(q.groupBy).toEqual([{ kind: "timeBucket", column: "timestamp", grain: "hour", alias: "bucket" }]);
+    expect(q.groupBy).toEqual([
+      { kind: "timeBucket", column: "timestamp", grain: "hour", alias: "bucket" },
+    ]);
     expect(q.orderBy).toEqual({ ref: "bucket", dir: "asc" });
     expect(timeRangePredicate(q.where)).toBeDefined();
   });
@@ -198,7 +237,12 @@ describe("compilePlan — §9 catalog", () => {
     const q = compilePlan(plan);
 
     expect(q.source).toBe("runs");
-    expect(q.metric).toEqual({ kind: "simple", fn: "avg", column: "stepCount", alias: "value" });
+    expect(q.metric).toEqual({
+      kind: "simple",
+      fn: "avg",
+      column: "stepCount",
+      alias: "value",
+    });
     expect(q.groupBy).toEqual([{ kind: "column", column: "outcome", alias: "outcome" }]);
     expect(timeRangePredicate(q.where)).toBeDefined();
   });
@@ -234,7 +278,9 @@ describe("compilePlan — invariants & negative checks", () => {
       timeRange,
       chartHint: "table",
     });
-    expect(q.where).toEqual([{ kind: "timeRange", column: "timestamp", from: FROM, to: TO }]);
+    expect(q.where).toEqual([
+      { kind: "timeRange", column: "timestamp", from: FROM, to: TO },
+    ]);
     expect(q.groupBy).toEqual([]);
   });
 
@@ -270,7 +316,12 @@ describe("compilePlan — invariants & negative checks", () => {
     // `avg` without a field is only caught at runtime by the schema's superRefine
     // (field is structurally optional), proving compilePlan re-validates defensively.
     expect(() =>
-      compilePlan({ level: "event", metric: { agg: "avg" }, timeRange, chartHint: "bar" }),
+      compilePlan({
+        level: "event",
+        metric: { agg: "avg" },
+        timeRange,
+        chartHint: "bar",
+      }),
     ).toThrow();
   });
 

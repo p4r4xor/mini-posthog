@@ -1,10 +1,10 @@
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import type { FastifyInstance } from "fastify";
 import type { CaptureEvent, TraceDetail, TraceSummary } from "@ata/contracts";
-import { DuckDBEventStore } from "../../src/storage/index.js";
+import type { FastifyInstance } from "fastify";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { buildApp } from "../../src/http/app.js";
 import { IngestionService } from "../../src/ingestion/ingestion-service.js";
 import { QueryService } from "../../src/query/query-service.js";
-import { buildApp } from "../../src/http/app.js";
+import { DuckDBEventStore } from "../../src/storage/index.js";
 
 const API_KEY = "dev_project_key";
 const TIME_RANGE = {
@@ -182,7 +182,9 @@ describe("POST /capture", () => {
     const body = res.json();
     expect(body.accepted).toBe(sampleEvents().length);
     expect(body.rejected).toBe(1);
-    expect(body.results.some((r: { status: string }) => r.status === "rejected")).toBe(true);
+    expect(body.results.some((r: { status: string }) => r.status === "rejected")).toBe(
+      true,
+    );
   });
 
   it("rejects when x-api-key is missing", async () => {

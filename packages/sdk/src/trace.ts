@@ -21,7 +21,6 @@ export interface TraceContext {
 
 export class TraceImpl implements Trace {
   readonly traceId: string;
-  private closed = false;
 
   constructor(private readonly ctx: TraceContext) {
     this.traceId = ctx.traceId;
@@ -42,8 +41,10 @@ export class TraceImpl implements Trace {
     );
   }
 
-  /** No server event — trace state is derivable from its runs. */
-  end(): void {
-    this.closed = true;
-  }
+  /**
+   * No-op by design: a trace emits no server event — its state (outcome, totals,
+   * duration) is derived server-side from its runs. Present for lifecycle symmetry
+   * with `run.end()` and to allow future client-side bookkeeping.
+   */
+  end(): void {}
 }

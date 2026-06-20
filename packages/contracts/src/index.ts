@@ -12,7 +12,7 @@
  */
 export * from "./common.js";
 export * from "./events.js";
+export * from "./mappers.js";
 export * from "./query-plan.js";
 export * from "./query-result.js";
 export * from "./storage.js";
-export * from "./mappers.js";

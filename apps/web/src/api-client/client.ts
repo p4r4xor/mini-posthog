@@ -57,7 +57,8 @@ export async function runQuery(req: QueryRequest): Promise<QueryResponse> {
 /** GET the trace list for the explorer, with optional filters. */
 export async function listTraces(params: ListTracesParams = {}): Promise<TraceSummary[]> {
   const res = await fetch(`/traces${toQueryString({ ...params })}`);
-  if (!res.ok) throw new ApiError(`Failed to list traces (HTTP ${res.status})`, res.status);
+  if (!res.ok)
+    throw new ApiError(`Failed to list traces (HTTP ${res.status})`, res.status);
   return (await res.json()) as TraceSummary[];
 }
 
@@ -65,6 +66,7 @@ export async function listTraces(params: ListTracesParams = {}): Promise<TraceSu
 export async function getTrace(traceId: string): Promise<TraceDetail | null> {
   const res = await fetch(`/traces/${encodeURIComponent(traceId)}`);
   if (res.status === 404) return null;
-  if (!res.ok) throw new ApiError(`Failed to load trace (HTTP ${res.status})`, res.status);
+  if (!res.ok)
+    throw new ApiError(`Failed to load trace (HTTP ${res.status})`, res.status);
   return (await res.json()) as TraceDetail;
 }

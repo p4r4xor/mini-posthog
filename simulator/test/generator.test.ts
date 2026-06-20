@@ -33,13 +33,34 @@ describe("generateTrace", () => {
     const calls = generate(300);
     const kinds = new Set(calls.map((c) => c.kind));
     // Lifecycle + every capture kind should appear across 300 traces.
-    for (const k of ["start_trace", "start_run", "llm_call", "tool_call", "error", "retry", "end_run", "end_trace"]) {
+    for (const k of [
+      "start_trace",
+      "start_run",
+      "llm_call",
+      "tool_call",
+      "error",
+      "retry",
+      "end_run",
+      "end_trace",
+    ]) {
       expect(kinds.has(k as SimCall["kind"])).toBe(true);
     }
 
-    const agents = new Set(calls.filter((c) => c.kind === "start_trace").map((c) => (c as Extract<SimCall, { kind: "start_trace" }>).agentName));
-    const models = new Set(calls.filter((c) => c.kind === "llm_call").map((c) => (c as Extract<SimCall, { kind: "llm_call" }>).model));
-    const tools = new Set(calls.filter((c) => c.kind === "tool_call").map((c) => (c as Extract<SimCall, { kind: "tool_call" }>).toolName));
+    const agents = new Set(
+      calls
+        .filter((c) => c.kind === "start_trace")
+        .map((c) => (c as Extract<SimCall, { kind: "start_trace" }>).agentName),
+    );
+    const models = new Set(
+      calls
+        .filter((c) => c.kind === "llm_call")
+        .map((c) => (c as Extract<SimCall, { kind: "llm_call" }>).model),
+    );
+    const tools = new Set(
+      calls
+        .filter((c) => c.kind === "tool_call")
+        .map((c) => (c as Extract<SimCall, { kind: "tool_call" }>).toolName),
+    );
 
     expect(agents.size).toBeGreaterThan(1);
     expect(models.size).toBeGreaterThan(1);
@@ -49,7 +70,9 @@ describe("generateTrace", () => {
   it("produces successes AND failures", () => {
     const calls = generate(300);
     const outcomes = new Set(
-      calls.filter((c) => c.kind === "end_run").map((c) => (c as Extract<SimCall, { kind: "end_run" }>).status),
+      calls
+        .filter((c) => c.kind === "end_run")
+        .map((c) => (c as Extract<SimCall, { kind: "end_run" }>).status),
     );
     expect(outcomes.has("success")).toBe(true);
     expect(outcomes.has("failed")).toBe(true);
@@ -109,23 +132,43 @@ describe("generateTrace", () => {
     const fetchMock = vi.fn(async (_url: string, init?: RequestInit) => {
       const body = JSON.parse(String(init?.body)) as { events: unknown[] };
       captured.push(...body.events);
-      return new Response(JSON.stringify({ accepted: body.events.length, duplicates: 0, rejected: 0, results: [] }), {
-        status: 200,
-        headers: { "content-type": "application/json" },
-      });
+      return new Response(
+        JSON.stringify({
+          accepted: body.events.length,
+          duplicates: 0,
+          rejected: 0,
+          results: [],
+        }),
+        {
+          status: 200,
+          headers: { "content-type": "application/json" },
+        },
+      );
     });
     vi.stubGlobal("fetch", fetchMock);
 
-    const client = initAgentAnalytics({ apiKey: "dev_project_key", host: "http://localhost:9", flushAt: 100, flushIntervalMs: 10_000 });
+    const client = initAgentAnalytics({
+      apiKey: "dev_project_key",
+      host: "http://localhost:9",
+      flushAt: 100,
+      flushIntervalMs: 10_000,
+    });
     const rng = mulberry32(7);
-    for (let i = 0; i < 30; i++) driveCalls(client as unknown as Parameters<typeof driveCalls>[0], generateTrace(rng, ctx(i)));
+    for (let i = 0; i < 30; i++)
+      driveCalls(
+        client as unknown as Parameters<typeof driveCalls>[0],
+        generateTrace(rng, ctx(i)),
+      );
     await client.flush();
     await client.shutdown();
 
     expect(captured.length).toBeGreaterThan(0);
     for (const ev of captured) {
       const parsed = CaptureEvent.safeParse(ev);
-      if (!parsed.success) throw new Error(`invalid wire event: ${JSON.stringify(parsed.error.issues)}\n${JSON.stringify(ev)}`);
+      if (!parsed.success)
+        throw new Error(
+          `invalid wire event: ${JSON.stringify(parsed.error.issues)}\n${JSON.stringify(ev)}`,
+        );
     }
   });
 });
@@ -135,10 +178,18 @@ describe("runSimulation", () => {
   beforeEach(() => {
     fetchMock = vi.fn(async (_url: string, init?: RequestInit) => {
       const body = JSON.parse(String(init?.body)) as { events: unknown[] };
-      return new Response(JSON.stringify({ accepted: body.events.length, duplicates: 0, rejected: 0, results: [] }), {
-        status: 200,
-        headers: { "content-type": "application/json" },
-      });
+      return new Response(
+        JSON.stringify({
+          accepted: body.events.length,
+          duplicates: 0,
+          rejected: 0,
+          results: [],
+        }),
+        {
+          status: 200,
+          headers: { "content-type": "application/json" },
+        },
+      );
     });
     vi.stubGlobal("fetch", fetchMock);
   });
@@ -161,7 +212,14 @@ describe("runSimulation", () => {
   });
 
   it("is reproducible: same seed → identical trace/event counts", async () => {
-    const opts = { host: "http://localhost:9", apiKey: "dev_project_key", targetEvents: 1200, days: 7, seed: 9, nowMs: WINDOW_END } as const;
+    const opts = {
+      host: "http://localhost:9",
+      apiKey: "dev_project_key",
+      targetEvents: 1200,
+      days: 7,
+      seed: 9,
+      nowMs: WINDOW_END,
+    } as const;
     const a = await runSimulation({ ...opts });
     const b = await runSimulation({ ...opts });
     expect(a.events).toBe(b.events);

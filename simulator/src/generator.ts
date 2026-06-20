@@ -19,23 +19,16 @@
  */
 import {
   AGENTS,
+  type AgentProfile,
   ERROR_TYPES,
   MODELS,
+  type ModelProfile,
   SAMPLE_INPUTS,
   TOOLS,
-  userId,
-  type AgentProfile,
-  type ModelProfile,
   type ToolProfile,
+  userId,
 } from "./profiles.js";
-import {
-  chance,
-  pick,
-  randInt,
-  skewed,
-  weightedPick,
-  type Rng,
-} from "./rng.js";
+import { chance, pick, type Rng, randInt, skewed, weightedPick } from "./rng.js";
 
 /** Per-trace generation context. */
 export interface TraceContext {
@@ -53,7 +46,12 @@ export interface TraceContext {
  * ISO strings so they drop straight into the SDK's `at` option and the wire.
  */
 export type SimCall =
-  | { kind: "start_trace"; agentName: string; userId: string; tags: Record<string, unknown> }
+  | {
+      kind: "start_trace";
+      agentName: string;
+      userId: string;
+      tags: Record<string, unknown>;
+    }
   | { kind: "start_run"; input: string; at: string }
   | {
       kind: "llm_call";
@@ -74,8 +72,22 @@ export type SimCall =
       at: string;
     }
   | { kind: "step"; latencyMs: number; at: string }
-  | { kind: "error"; errorType: string; message: string; toolName?: string; latencyMs: number; at: string }
-  | { kind: "retry"; attempt: number; toolName?: string; status: "success" | "failed"; latencyMs: number; at: string }
+  | {
+      kind: "error";
+      errorType: string;
+      message: string;
+      toolName?: string;
+      latencyMs: number;
+      at: string;
+    }
+  | {
+      kind: "retry";
+      attempt: number;
+      toolName?: string;
+      status: "success" | "failed";
+      latencyMs: number;
+      at: string;
+    }
   | { kind: "end_run"; status: "success" | "failed"; output?: string; at: string }
   | { kind: "end_trace" };
 
@@ -115,7 +127,11 @@ class Clock {
  * SECOND run — a run-level retry, i.e. a trace with more than one run.
  */
 export function* generateTrace(rng: Rng, ctx: TraceContext): Generator<SimCall> {
-  const agent = weightedPick(rng, AGENTS, AGENTS.map((a) => a.weight));
+  const agent = weightedPick(
+    rng,
+    AGENTS,
+    AGENTS.map((a) => a.weight),
+  );
   const uid = userId(ctx.index * 7 + randInt(rng, 0, 5));
 
   yield {
@@ -152,7 +168,7 @@ function* generateRun(
   rng: Rng,
   agent: AgentProfile,
   startMs: number,
-  attempt: number,
+  _attempt: number,
 ): Generator<SimCall, boolean> {
   const clock = new Clock(startMs);
   const input = pick(rng, SAMPLE_INPUTS);
@@ -222,7 +238,11 @@ function* generateRun(
     // Occasional intermediate reasoning step.
     if (chance(rng, 0.4)) {
       const stepLatency = skewed(rng, 20, 600);
-      yield { kind: "step", latencyMs: round2(stepLatency), at: clock.advance(stepLatency) };
+      yield {
+        kind: "step",
+        latencyMs: round2(stepLatency),
+        at: clock.advance(stepLatency),
+      };
     }
 
     if (fatalHere) {
@@ -253,10 +273,16 @@ function* generateRun(
 }
 
 function* emitLlmCall(rng: Rng, clock: Clock, forceFail: boolean): Generator<SimCall> {
-  const model = weightedPick(rng, MODELS, MODELS.map((m) => m.weight));
+  const model = weightedPick(
+    rng,
+    MODELS,
+    MODELS.map((m) => m.weight),
+  );
   const latencyMs = skewed(rng, model.latencyMs[0], model.latencyMs[1]);
   const inputTokens = Math.round(skewed(rng, model.inputTokens[0], model.inputTokens[1]));
-  const outputTokens = Math.round(skewed(rng, model.outputTokens[0], model.outputTokens[1]));
+  const outputTokens = Math.round(
+    skewed(rng, model.outputTokens[0], model.outputTokens[1]),
+  );
   const failed = forceFail || chance(rng, model.failureRate);
   yield {
     kind: "llm_call",
@@ -294,7 +320,11 @@ function pickTool(rng: Rng, agent: AgentProfile): ToolProfile {
     const found = TOOLS.find((t) => t.name === name);
     if (found) return found;
   }
-  return weightedPick(rng, TOOLS, TOOLS.map((t) => t.weight));
+  return weightedPick(
+    rng,
+    TOOLS,
+    TOOLS.map((t) => t.weight),
+  );
 }
 
 /** Number of wire events a SimCall stream produces (everything but start_trace/end_trace). */

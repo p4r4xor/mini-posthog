@@ -82,6 +82,6 @@ export function skewed(rng: Rng, min: number, max: number, skew = 2): number {
   // mass toward 0, producing a right-skewed (long-tail) distribution.
   let acc = 0;
   for (let i = 0; i < skew; i++) acc += rng.next();
-  const u = Math.pow(acc / skew, 1.6);
+  const u = (acc / skew) ** 1.6;
   return min + u * (max - min);
 }

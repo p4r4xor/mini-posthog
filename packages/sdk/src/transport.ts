@@ -28,8 +28,7 @@ export class PermanentTransportError extends Error {
 const sleep = (ms: number): Promise<void> =>
   new Promise((resolve) => setTimeout(resolve, ms));
 
-const isRetryableStatus = (status: number): boolean =>
-  status === 429 || status >= 500;
+const isRetryableStatus = (status: number): boolean => status === 429 || status >= 500;
 
 /** Backoff for the Nth (0-based) retry: base * 2^attempt + [0, base) jitter. */
 function backoffMs(retryBaseMs: number, attempt: number): number {

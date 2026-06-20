@@ -6,10 +6,10 @@
  * http/app.ts so integration tests can inject an in-memory store.
  */
 import { API_PORT, STORAGE_ENGINE } from "./config.js";
+import { buildApp } from "./http/app.js";
 import { IngestionService } from "./ingestion/ingestion-service.js";
 import { QueryService } from "./query/query-service.js";
 import { createEventStore } from "./storage/store-factory.js";
-import { buildApp } from "./http/app.js";
 
 async function main(): Promise<void> {
   const store = createEventStore(STORAGE_ENGINE);

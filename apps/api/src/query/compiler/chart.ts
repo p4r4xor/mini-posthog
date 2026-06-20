@@ -1,4 +1,4 @@
-import type { QueryPlan, ChartHint, Dimension } from "@ata/contracts";
+import type { ChartHint, Dimension, QueryPlan } from "@ata/contracts";
 
 /**
  * Chart selection actually lives in the planner — the plan already carries

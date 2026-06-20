@@ -5,8 +5,8 @@
  */
 import type { JSX } from "react";
 import { useState } from "react";
-import { QueryView } from "./features/query/QueryView.js";
 import { ExplorerView } from "./features/explorer/ExplorerView.js";
+import { QueryView } from "./features/query/QueryView.js";
 
 type Tab = "query" | "explorer";
 

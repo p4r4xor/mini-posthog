@@ -9,6 +9,8 @@
  * columns from `result.columns` rather than hard-coding names, so any supported
  * plan renders without per-question logic.
  */
+
+import type { JSX } from "react";
 import {
   Bar,
   BarChart,
@@ -21,7 +23,6 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
-import type { JSX } from "react";
 import type { CellValue, QueryResult, ResultColumn } from "../../api-client/index.js";
 
 /** A small palette cycled across series so multi-line/grouped charts stay legible. */
@@ -41,7 +42,10 @@ function colorFor(index: number): string {
 }
 
 /** First column matching a role (columns carry role metadata in the contract). */
-function columnByRole(columns: ResultColumn[], role: ResultColumn["role"]): ResultColumn | undefined {
+function columnByRole(
+  columns: ResultColumn[],
+  role: ResultColumn["role"],
+): ResultColumn | undefined {
   return columns.find((c) => c.role === role);
 }
 
@@ -63,7 +67,6 @@ export function ResultChart({ result }: { result: QueryResult }): JSX.Element {
       return <LineView result={result} />;
     case "bar":
       return <BarView result={result} />;
-    case "table":
     default:
       return <TableView result={result} />;
   }
@@ -93,7 +96,9 @@ function LineView({ result }: { result: QueryResult }): JSX.Element {
     const byTime = new Map<string, Record<string, CellValue>>();
     for (const row of result.rows) {
       const t = display(row[xKey]);
-      const bucket: Record<string, CellValue> = byTime.get(t) ?? { [xKey]: row[xKey] ?? null };
+      const bucket: Record<string, CellValue> = byTime.get(t) ?? {
+        [xKey]: row[xKey] ?? null,
+      };
       bucket[display(row[dimCol.name])] = row[measureKey] ?? null;
       byTime.set(t, bucket);
     }
@@ -155,10 +160,23 @@ function BarView({ result }: { result: QueryResult }): JSX.Element {
     <ResponsiveContainer width="100%" height={360}>
       <BarChart data={result.rows} margin={{ top: 8, right: 24, bottom: 8, left: 0 }}>
         <CartesianGrid strokeDasharray="3 3" stroke="#26262e" />
-        <XAxis dataKey={dimCol.name} tick={{ fontSize: 11 }} stroke="#8a8a96" interval={0} angle={-15} textAnchor="end" height={56} />
+        <XAxis
+          dataKey={dimCol.name}
+          tick={{ fontSize: 11 }}
+          stroke="#8a8a96"
+          interval={0}
+          angle={-15}
+          textAnchor="end"
+          height={56}
+        />
         <YAxis tick={{ fontSize: 11 }} stroke="#8a8a96" />
         <Tooltip contentStyle={tooltipStyle} cursor={{ fill: "#ffffff0d" }} />
-        <Bar dataKey={measureCol.name} name={measureCol.name} fill={colorFor(0)} radius={[3, 3, 0, 0]} />
+        <Bar
+          dataKey={measureCol.name}
+          name={measureCol.name}
+          fill={colorFor(0)}
+          radius={[3, 3, 0, 0]}
+        />
       </BarChart>
     </ResponsiveContainer>
   );
@@ -180,8 +198,8 @@ function TableView({ result }: { result: QueryResult }): JSX.Element {
           </tr>
         </thead>
         <tbody>
-          {result.rows.map((row, i) => (
-            <tr key={i}>
+          {result.rows.map((row) => (
+            <tr key={result.columns.map((c) => String(row[c.name] ?? "")).join("¦")}>
               {result.columns.map((c) => (
                 <td key={c.name}>{display(row[c.name])}</td>
               ))}

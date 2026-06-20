@@ -3,8 +3,8 @@ import type {
   CompiledMetric,
   CompiledPredicate,
   CompiledQuery,
+  TimeGrain,
 } from "@ata/contracts";
-import type { TimeGrain } from "@ata/contracts";
 import { resolveField, resolveSource } from "./field-map.js";
 
 /**

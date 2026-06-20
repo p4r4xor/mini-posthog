@@ -2,10 +2,10 @@ import { QueryPlan, type TimeRange } from "@ata/contracts";
 import { matchDeterministic } from "./deterministic.js";
 import { defaultLlmPlanner } from "./llm.js";
 import {
-  SUPPORTED_QUESTIONS,
   type PlanContext,
   type PlanOptions,
   type PlanResult,
+  SUPPORTED_QUESTIONS,
 } from "./types.js";
 
 /**
@@ -39,10 +39,7 @@ function resolveTimeRange(opts: PlanOptions, now: Date): TimeRange {
  * Never throws on bad NL or model output — returns `{ ok: false, ... }` with the
  * supported catalog instead.
  */
-export async function planQuery(
-  nl: string,
-  opts: PlanOptions = {},
-): Promise<PlanResult> {
+export async function planQuery(nl: string, opts: PlanOptions = {}): Promise<PlanResult> {
   const now = opts.now ?? new Date();
   const timeRange = resolveTimeRange(opts, now);
   const ctx: PlanContext = { now, timeRange };
@@ -55,9 +52,7 @@ export async function planQuery(
       return { ok: true, plan: parsed.data, source: "deterministic" };
     }
     // A template produced an invalid plan — a bug, but never throw at callers.
-    return reject(
-      "Internal: the matched template produced an invalid plan.",
-    );
+    return reject("Internal: the matched template produced an invalid plan.");
   }
 
   // 2) LLM fallback (constrained, slot-filling only).

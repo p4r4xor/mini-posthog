@@ -1,18 +1,23 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { CaptureEvent } from "@ata/contracts";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { initAgentAnalytics } from "../src/index.js";
 
 /** Build an `ok` fetch Response stub. */
 function okResponse(): Response {
-  return new Response(JSON.stringify({ accepted: 1, duplicates: 0, rejected: 0, results: [] }), {
-    status: 200,
-    headers: { "content-type": "application/json" },
-  });
+  return new Response(
+    JSON.stringify({ accepted: 1, duplicates: 0, rejected: 0, results: [] }),
+    {
+      status: 200,
+      headers: { "content-type": "application/json" },
+    },
+  );
 }
 
 /** Extract the parsed JSON bodies of every fetch call. */
 function sentBodies(fetchMock: ReturnType<typeof vi.fn>): { events: unknown[] }[] {
-  return fetchMock.mock.calls.map((call) => JSON.parse(String((call[1] as RequestInit).body)));
+  return fetchMock.mock.calls.map((call) =>
+    JSON.parse(String((call[1] as RequestInit).body)),
+  );
 }
 
 /** Flatten all events sent across all fetch calls. */
@@ -82,10 +87,24 @@ describe("wire-contract conformance", () => {
       costUsd: 0.01,
       metadata: { temperature: 0.7 },
     });
-    run.captureToolCall({ toolName: "weather_api", latencyMs: 80, status: "success", costUsd: 0.001 });
+    run.captureToolCall({
+      toolName: "weather_api",
+      latencyMs: 80,
+      status: "success",
+      costUsd: 0.001,
+    });
     run.captureStep({ latencyMs: 5 });
-    run.captureRetry({ attempt: 1, toolName: "weather_api", status: "failed", latencyMs: 90 });
-    run.captureError({ errorType: "TimeoutError", message: "took too long", toolName: "weather_api" });
+    run.captureRetry({
+      attempt: 1,
+      toolName: "weather_api",
+      status: "failed",
+      latencyMs: 90,
+    });
+    run.captureError({
+      errorType: "TimeoutError",
+      message: "took too long",
+      toolName: "weather_api",
+    });
     run.end({ status: "success", output: "It is sunny." });
     trace.end();
 
@@ -95,16 +114,26 @@ describe("wire-contract conformance", () => {
     expect(events).toHaveLength(7); // run_started + 5 captures + run_completed
     for (const ev of events) {
       const parsed = CaptureEvent.safeParse(ev);
-      expect(parsed.success, JSON.stringify({ ev, error: parsed.success ? null : parsed.error.format() })).toBe(true);
+      expect(
+        parsed.success,
+        JSON.stringify({ ev, error: parsed.success ? null : parsed.error.format() }),
+      ).toBe(true);
     }
   });
 
   it("merges trace tags into metadata.tags", async () => {
     const client = initAgentAnalytics({ apiKey: "k", host: "http://x", flushAt: 1000 });
-    const run = client.startRun({ agentName: "a", userId: "u", input: "x", tags: { env: "prod" } });
+    const run = client.startRun({
+      agentName: "a",
+      userId: "u",
+      input: "x",
+      tags: { env: "prod" },
+    });
     run.captureStep();
     await client.flush();
-    const events = allSentEvents(fetchMock) as { metadata: { tags?: Record<string, unknown> } }[];
+    const events = allSentEvents(fetchMock) as {
+      metadata: { tags?: Record<string, unknown> };
+    }[];
     for (const ev of events) {
       expect(ev.metadata.tags).toMatchObject({ env: "prod" });
     }
@@ -116,11 +145,11 @@ describe("wire-contract conformance", () => {
     run.end({ status: "success", output: "done" });
     await client.flush();
     const events = allSentEvents(fetchMock) as Record<string, unknown>[];
-    const completed = events.find((e) => e["eventType"] === "run_completed")!;
+    const completed = events.find((e) => e.eventType === "run_completed")!;
     expect(completed).toBeDefined();
-    expect(completed["costUsd"]).toBeUndefined();
-    expect(completed["latencyMs"]).toBeUndefined();
-    expect(completed["inputTokens"]).toBeUndefined();
+    expect(completed.costUsd).toBeUndefined();
+    expect(completed.latencyMs).toBeUndefined();
+    expect(completed.inputTokens).toBeUndefined();
   });
 });
 
@@ -134,7 +163,7 @@ describe("stepIndex", () => {
     await client.flush();
     const events = allSentEvents(fetchMock) as { eventType: string; stepIndex: number }[];
     expect(events.map((e) => e.stepIndex)).toEqual([0, 1, 2, 3]);
-    expect(events[0]!.eventType).toBe("run_started");
+    expect(events[0]?.eventType).toBe("run_started");
   });
 
   it("resets per run within a trace", async () => {
@@ -147,14 +176,19 @@ describe("stepIndex", () => {
     await client.flush();
     const events = allSentEvents(fetchMock) as { runId: string; stepIndex: number }[];
     const byRun = new Map<string, number[]>();
-    for (const e of events) byRun.set(e.runId, [...(byRun.get(e.runId) ?? []), e.stepIndex]);
+    for (const e of events)
+      byRun.set(e.runId, [...(byRun.get(e.runId) ?? []), e.stepIndex]);
     for (const indices of byRun.values()) expect(indices).toEqual([0, 1]);
   });
 });
 
 describe("transport request shape", () => {
   it("sets x-api-key header and { events: [...] } body", async () => {
-    const client = initAgentAnalytics({ apiKey: "secret-key", host: "http://example.test", flushAt: 1000 });
+    const client = initAgentAnalytics({
+      apiKey: "secret-key",
+      host: "http://example.test",
+      flushAt: 1000,
+    });
     const run = client.startRun({ agentName: "a", userId: "u", input: "x" });
     run.captureStep();
     await client.flush();

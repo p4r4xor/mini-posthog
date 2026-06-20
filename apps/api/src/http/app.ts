@@ -1,9 +1,9 @@
+import type { EventStore, TraceFilter } from "@ata/contracts";
 import cors from "@fastify/cors";
 import Fastify, { type FastifyInstance } from "fastify";
-import type { EventStore, TraceFilter } from "@ata/contracts";
 import { resolveProjectId } from "../config.js";
-import { IngestionService } from "../ingestion/ingestion-service.js";
-import { QueryService } from "../query/query-service.js";
+import type { IngestionService } from "../ingestion/ingestion-service.js";
+import type { QueryService } from "../query/query-service.js";
 
 /** Dependencies injected into the app — tests pass a :memory: store. */
 export interface AppDeps {

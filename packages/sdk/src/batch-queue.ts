@@ -87,10 +87,7 @@ export class BatchQueue {
         await sendBatch(this.config, chunk);
       } catch (err) {
         // Retry budget exhausted or permanent failure: drop the chunk, notify.
-        this.config.onError(
-          err instanceof Error ? err : new Error(String(err)),
-          chunk,
-        );
+        this.config.onError(err instanceof Error ? err : new Error(String(err)), chunk);
       }
     }
   }

@@ -1,7 +1,3 @@
-import {
-  DuckDBInstance,
-  type DuckDBConnection,
-} from "@duckdb/node-api";
 import type {
   AggregateResult,
   CellValue,
@@ -17,6 +13,7 @@ import type {
   TraceFilter,
   TraceSummary,
 } from "@ata/contracts";
+import { type DuckDBConnection, DuckDBInstance } from "@duckdb/node-api";
 import { SCHEMA_DDL } from "./schema.js";
 import { renderAggregate } from "./sql-render.js";
 
@@ -264,7 +261,7 @@ function normaliseRow(
   return out;
 }
 
-function toCellValue(value: unknown, role: ResultColumn["role"]): CellValue {
+function toCellValue(value: unknown, _role: ResultColumn["role"]): CellValue {
   if (value === null || value === undefined) return null;
   if (value instanceof Date) return value.toISOString();
   if (typeof value === "bigint") return Number(value);

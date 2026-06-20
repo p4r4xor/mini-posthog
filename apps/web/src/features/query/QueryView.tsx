@@ -6,8 +6,8 @@
  */
 import type { JSX } from "react";
 import { useState } from "react";
-import { runQuery } from "../../api-client/index.js";
 import type { QueryResponse } from "../../api-client/index.js";
+import { runQuery } from "../../api-client/index.js";
 import { ResultChart } from "./ResultChart.js";
 
 /**

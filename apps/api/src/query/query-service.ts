@@ -1,12 +1,7 @@
-import type {
-  CompiledQuery,
-  EventStore,
-  QueryResult,
-  TimeRange,
-} from "@ata/contracts";
+import type { CompiledQuery, EventStore, QueryResult, TimeRange } from "@ata/contracts";
 import { compilePlan } from "./compiler/index.js";
-import { planQuery } from "./planner/index.js";
 import type { LlmPlanner } from "./planner/index.js";
+import { planQuery } from "./planner/index.js";
 
 export interface RunQueryOptions {
   /** Project to scope the query to (injected as a where predicate). */

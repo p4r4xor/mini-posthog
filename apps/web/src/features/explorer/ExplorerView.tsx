@@ -5,14 +5,14 @@
  */
 import type { JSX } from "react";
 import { useEffect, useState } from "react";
-import { getTrace, listTraces } from "../../api-client/index.js";
 import type {
   ListTracesParams,
   TraceDetail,
   TraceSummary,
 } from "../../api-client/index.js";
-import { TraceFilters } from "./TraceFilters.js";
+import { getTrace, listTraces } from "../../api-client/index.js";
 import { TraceDetailView } from "./TraceDetailView.js";
+import { TraceFilters } from "./TraceFilters.js";
 
 function fmtTime(iso: string): string {
   const d = new Date(iso);
@@ -44,7 +44,8 @@ export function ExplorerView(): JSX.Element {
         if (!cancelled) setTraces(rows);
       })
       .catch((err: unknown) => {
-        if (!cancelled) setListError(err instanceof Error ? err.message : "Failed to load");
+        if (!cancelled)
+          setListError(err instanceof Error ? err.message : "Failed to load");
       })
       .finally(() => {
         if (!cancelled) setListLoading(false);
@@ -70,7 +71,8 @@ export function ExplorerView(): JSX.Element {
         setDetail(d);
       })
       .catch((err: unknown) => {
-        if (!cancelled) setDetailError(err instanceof Error ? err.message : "Failed to load");
+        if (!cancelled)
+          setDetailError(err instanceof Error ? err.message : "Failed to load");
       })
       .finally(() => {
         if (!cancelled) setDetailLoading(false);

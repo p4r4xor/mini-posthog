@@ -1,7 +1,7 @@
-import { describe, it, expect } from "vitest";
 import type { QueryPlan } from "@ata/contracts";
-import { planQuery, SUPPORTED_QUESTIONS } from "../../src/query/planner/index.js";
+import { describe, expect, it } from "vitest";
 import type { LlmPlanner, PlanContext } from "../../src/query/planner/index.js";
+import { planQuery, SUPPORTED_QUESTIONS } from "../../src/query/planner/index.js";
 
 /** Fixed reference time so timeRange assertions are deterministic (no network). */
 const NOW = new Date("2026-06-20T12:00:00.000Z");
@@ -53,9 +53,7 @@ describe("deterministic catalog coverage", () => {
     expect(p.chartHint).toBe("line");
     // timeRange is filled from `now` (default 7-day lookback).
     expect(p.timeRange.to).toBe(NOW.toISOString());
-    expect(p.timeRange.from).toBe(
-      new Date("2026-06-13T12:00:00.000Z").toISOString(),
-    );
+    expect(p.timeRange.from).toBe(new Date("2026-06-13T12:00:00.000Z").toISOString());
   });
 
   it("p95 LLM latency by model → quantile (deterministic, beats the avg template)", async () => {
@@ -91,9 +89,7 @@ describe("deterministic catalog coverage", () => {
   });
 
   it("cost per successful run by model", async () => {
-    const r = expectOk(
-      await planQuery("cost per successful run by model", { now: NOW }),
-    );
+    const r = expectOk(await planQuery("cost per successful run by model", { now: NOW }));
     const p = r.plan;
     expect(p.level).toBe("run");
     expect(p.metric).toMatchObject({ agg: "avg", field: "costUsd" });
@@ -138,9 +134,7 @@ describe("deterministic catalog coverage", () => {
   });
 
   it("average steps per run by outcome", async () => {
-    const r = expectOk(
-      await planQuery("average steps per run by outcome", { now: NOW }),
-    );
+    const r = expectOk(await planQuery("average steps per run by outcome", { now: NOW }));
     const p = r.plan;
     expect(p.level).toBe("run");
     expect(p.metric).toMatchObject({ agg: "avg", field: "stepCount" });
@@ -160,9 +154,7 @@ describe("deterministic catalog coverage", () => {
       from: "2026-01-01T00:00:00.000Z",
       to: "2026-02-01T00:00:00.000Z",
     };
-    const r = expectOk(
-      await planQuery("token usage by agent", { now: NOW, timeRange }),
-    );
+    const r = expectOk(await planQuery("token usage by agent", { now: NOW, timeRange }));
     expect(r.plan.timeRange).toEqual(timeRange);
   });
 });

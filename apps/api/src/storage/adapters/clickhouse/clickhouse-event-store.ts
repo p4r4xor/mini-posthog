@@ -1,4 +1,3 @@
-import { createClient, type ClickHouseClient } from "@clickhouse/client";
 import type {
   AggregateResult,
   CellValue,
@@ -14,6 +13,7 @@ import type {
   TraceFilter,
   TraceSummary,
 } from "@ata/contracts";
+import { type ClickHouseClient, createClient } from "@clickhouse/client";
 import type { ClickHouseConfig } from "../../../config.js";
 import { schemaDdl } from "./schema.js";
 import { renderAggregate } from "./sql-render.js";
@@ -165,7 +165,8 @@ export class ClickHouseEventStore implements EventStore {
 
     // projectId is always present.
     conds.push(`t.project_id = ${add(filter.projectId, "String")}`);
-    if (filter.from) conds.push(`t.started_at >= ${add(toChDateTime(filter.from), "String")}`);
+    if (filter.from)
+      conds.push(`t.started_at >= ${add(toChDateTime(filter.from), "String")}`);
     if (filter.to) conds.push(`t.started_at < ${add(toChDateTime(filter.to), "String")}`);
     if (filter.agentName) conds.push(`t.agent_name = ${add(filter.agentName, "String")}`);
     if (filter.status) conds.push(`t.outcome = ${add(filter.status, "String")}`);
@@ -192,7 +193,11 @@ export class ClickHouseEventStore implements EventStore {
     if (filter.limit !== undefined) sql += ` LIMIT ${Math.trunc(filter.limit)}`;
     if (filter.offset !== undefined) sql += ` OFFSET ${Math.trunc(filter.offset)}`;
 
-    const rs = await client.query({ query: sql, query_params: params, format: "JSONEachRow" });
+    const rs = await client.query({
+      query: sql,
+      query_params: params,
+      format: "JSONEachRow",
+    });
     const raw = await rs.json<Record<string, unknown>>();
     return raw.map(mapTraceSummary);
   }

@@ -1,8 +1,8 @@
 import {
   CaptureEvent,
-  captureEventToRow,
   type CaptureEventResult,
   type CaptureResponse,
+  captureEventToRow,
   type EventRow,
   type EventStore,
 } from "@ata/contracts";
@@ -18,10 +18,7 @@ import {
 export class IngestionService {
   constructor(private readonly store: EventStore) {}
 
-  async capture(
-    events: unknown[],
-    projectId: string,
-  ): Promise<CaptureResponse> {
+  async capture(events: unknown[], projectId: string): Promise<CaptureResponse> {
     const rows: EventRow[] = [];
     const results: CaptureEventResult[] = [];
     let rejected = 0;
@@ -34,7 +31,9 @@ export class IngestionService {
       }
       rejected += 1;
       const eventId =
-        raw && typeof raw === "object" && typeof (raw as { eventId?: unknown }).eventId === "string"
+        raw &&
+        typeof raw === "object" &&
+        typeof (raw as { eventId?: unknown }).eventId === "string"
           ? (raw as { eventId: string }).eventId
           : undefined;
       results.push({
@@ -42,7 +41,9 @@ export class IngestionService {
         // when the malformed event didn't carry a usable one.
         eventId: eventId ?? `index:${index}`,
         status: "rejected",
-        error: parsed.error.issues.map((i) => `${i.path.join(".")}: ${i.message}`).join("; "),
+        error: parsed.error.issues
+          .map((i) => `${i.path.join(".")}: ${i.message}`)
+          .join("; "),
       });
     });
 

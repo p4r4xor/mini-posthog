@@ -1,19 +1,19 @@
 /** Public surface of the typed API client. */
-export { runQuery, listTraces, getTrace, ApiError } from "./client.js";
+export { ApiError, getTrace, listTraces, runQuery } from "./client.js";
 export type {
+  CellValue,
+  ChartHint,
+  ColumnRole,
+  EventRow,
+  ListTracesParams,
+  QueryFailure,
   QueryRequest,
   QueryResponse,
-  QuerySuccess,
-  QueryFailure,
-  ListTracesParams,
   QueryResult,
-  ResultColumn,
-  CellValue,
-  ColumnRole,
   QueryResultMeta,
-  ChartHint,
-  TraceSummary,
-  TraceDetail,
+  QuerySuccess,
+  ResultColumn,
   RunSummary,
-  EventRow,
+  TraceDetail,
+  TraceSummary,
 } from "./types.js";

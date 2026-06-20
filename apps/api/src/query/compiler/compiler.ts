@@ -1,17 +1,17 @@
-import { z } from "zod";
-import {
-  QueryPlan as QueryPlanSchema,
-  type QueryPlan,
-  type Filter,
-  type QueryLevel,
-} from "@ata/contracts";
 import type {
-  CompiledQuery,
-  CompiledMetric,
   CompiledGroupKey,
+  CompiledMetric,
   CompiledPredicate,
+  CompiledQuery,
   SourceTable,
 } from "@ata/contracts";
+import {
+  type Filter,
+  type QueryLevel,
+  type QueryPlan,
+  QueryPlan as QueryPlanSchema,
+} from "@ata/contracts";
+import type { z } from "zod";
 import { isTimeDimension } from "./chart.js";
 
 /**

@@ -22,13 +22,13 @@ export function captureEventToRow(event: CaptureEvent, projectId: string): Event
     userId: event.userId,
     stepIndex: event.stepIndex,
     model: "model" in event ? event.model : null,
-    toolName: "toolName" in event ? event.toolName ?? null : null,
-    status: "status" in event ? event.status ?? null : null,
+    toolName: "toolName" in event ? (event.toolName ?? null) : null,
+    status: "status" in event ? (event.status ?? null) : null,
     errorType: "errorType" in event ? event.errorType : null,
-    latencyMs: "latencyMs" in event ? event.latencyMs ?? null : null,
+    latencyMs: "latencyMs" in event ? (event.latencyMs ?? null) : null,
     inputTokens: "inputTokens" in event ? event.inputTokens : null,
     outputTokens: "outputTokens" in event ? event.outputTokens : null,
-    costUsd: "costUsd" in event ? event.costUsd ?? null : null,
+    costUsd: "costUsd" in event ? (event.costUsd ?? null) : null,
     metadata: event.metadata ?? {},
   };
 }

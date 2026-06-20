@@ -26,9 +26,7 @@ const DEFAULTS = {
 
 /** Fallback error sink: warn, but never throw on the agent's hot path. */
 const defaultOnError: OnError = (err, dropped) => {
-  console.warn(
-    `[ata/sdk] dropped ${dropped.length} event(s): ${err.message}`,
-  );
+  console.warn(`[ata/sdk] dropped ${dropped.length} event(s): ${err.message}`);
 };
 
 function resolveConfig(config: AnalyticsConfig): ResolvedConfig {
@@ -50,7 +48,7 @@ class AnalyticsClientImpl implements AnalyticsClient {
   private readonly queue: BatchQueue;
   private readonly enqueue: (event: CaptureEvent) => void;
 
-  constructor(private readonly config: ResolvedConfig) {
+  constructor(readonly config: ResolvedConfig) {
     this.queue = new BatchQueue(config);
     this.queue.start();
     this.enqueue = (event) => {
@@ -75,7 +73,10 @@ class AnalyticsClientImpl implements AnalyticsClient {
       userId: opts.userId,
       tags: opts.tags,
     });
-    return trace.startRun({ input: opts.input, ...(opts.at !== undefined ? { at: opts.at } : {}) });
+    return trace.startRun({
+      input: opts.input,
+      ...(opts.at !== undefined ? { at: opts.at } : {}),
+    });
   }
 
   flush(): Promise<void> {

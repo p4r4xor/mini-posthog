@@ -1,11 +1,11 @@
 import Anthropic from "@anthropic-ai/sdk";
-import type { LlmPlanner, PlanContext } from "./types.js";
 import {
-  EMIT_TOOL_NAME,
-  DEFAULT_MODEL,
-  buildSystemPrompt,
   buildInputSchema,
+  buildSystemPrompt,
+  DEFAULT_MODEL,
+  EMIT_TOOL_NAME,
 } from "./prompt.js";
+import type { LlmPlanner, PlanContext } from "./types.js";
 
 /**
  * Default LLM planner (docs/architecture.md §10, step 2).

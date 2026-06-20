@@ -11,7 +11,11 @@ import { mulberry32, type Rng } from "./rng.js";
 
 /** The subset of the SDK surface the driver needs (lets tests substitute a fake). */
 export interface SdkLike {
-  startTrace(opts: { agentName: string; userId: string; tags?: Record<string, unknown> }): Trace;
+  startTrace(opts: {
+    agentName: string;
+    userId: string;
+    tags?: Record<string, unknown>;
+  }): Trace;
 }
 
 /**
@@ -26,7 +30,11 @@ export function driveCalls(sdk: SdkLike, calls: Iterable<SimCall>): number {
   for (const c of calls) {
     switch (c.kind) {
       case "start_trace":
-        trace = sdk.startTrace({ agentName: c.agentName, userId: c.userId, tags: c.tags });
+        trace = sdk.startTrace({
+          agentName: c.agentName,
+          userId: c.userId,
+          tags: c.tags,
+        });
         break;
       case "start_run":
         if (!trace) throw new Error("start_run before start_trace");
@@ -34,7 +42,7 @@ export function driveCalls(sdk: SdkLike, calls: Iterable<SimCall>): number {
         events++;
         break;
       case "llm_call":
-        run!.captureLLMCall({
+        run?.captureLLMCall({
           model: c.model,
           latencyMs: c.latencyMs,
           inputTokens: c.inputTokens,
@@ -46,7 +54,7 @@ export function driveCalls(sdk: SdkLike, calls: Iterable<SimCall>): number {
         events++;
         break;
       case "tool_call":
-        run!.captureToolCall({
+        run?.captureToolCall({
           toolName: c.toolName,
           latencyMs: c.latencyMs,
           status: c.status,
@@ -56,11 +64,11 @@ export function driveCalls(sdk: SdkLike, calls: Iterable<SimCall>): number {
         events++;
         break;
       case "step":
-        run!.captureStep({ latencyMs: c.latencyMs, at: c.at });
+        run?.captureStep({ latencyMs: c.latencyMs, at: c.at });
         events++;
         break;
       case "error":
-        run!.captureError({
+        run?.captureError({
           errorType: c.errorType,
           message: c.message,
           ...(c.toolName !== undefined ? { toolName: c.toolName } : {}),
@@ -70,7 +78,7 @@ export function driveCalls(sdk: SdkLike, calls: Iterable<SimCall>): number {
         events++;
         break;
       case "retry":
-        run!.captureRetry({
+        run?.captureRetry({
           attempt: c.attempt,
           ...(c.toolName !== undefined ? { toolName: c.toolName } : {}),
           status: c.status,
@@ -80,12 +88,16 @@ export function driveCalls(sdk: SdkLike, calls: Iterable<SimCall>): number {
         events++;
         break;
       case "end_run":
-        run!.end({ status: c.status, ...(c.output !== undefined ? { output: c.output } : {}), at: c.at });
+        run?.end({
+          status: c.status,
+          ...(c.output !== undefined ? { output: c.output } : {}),
+          at: c.at,
+        });
         events++;
         run = undefined;
         break;
       case "end_trace":
-        trace!.end();
+        trace?.end();
         trace = undefined;
         break;
     }
