@@ -1,6 +1,6 @@
 import type { EventType, Outcome, TimeGrain } from "./common.js";
 import type { FilterOp } from "./query-plan.js";
-import type { QueryResult } from "./query-result.js";
+import type { CellValue, ResultColumn } from "./query-result.js";
 
 /**
  * The storage seam (ports & adapters). Everything here is engine-neutral: the
@@ -99,15 +99,29 @@ export interface TraceFilter {
 // Compiled query — the neutral IR the compiler hands to an adapter
 // ---------------------------------------------------------------------------
 
-/** Which physical source a compiled query reads (resolved from QueryLevel). */
+/** Which logical source a compiled query reads (resolved from QueryLevel). */
 export type SourceTable = "events" | "runs" | "traces";
 
-/** A resolved predicate over a physical column. */
+/**
+ * NOTE on `column` fields throughout `CompiledQuery`: these are LOGICAL field
+ * identifiers from the contract vocabulary (e.g. "latencyMs", "model",
+ * "timestamp", "durationMs") — NOT physical SQL column names. Each EventStore
+ * adapter owns the logical→physical mapping (snake_case columns, etc.) and the
+ * dialect rendering. This keeps the compiler fully engine-agnostic.
+ *
+ * Logical fields available per source:
+ *   - events: EventRow fields (eventId, traceId, runId, eventType, timestamp,
+ *             agentName, userId, model, toolName, status, errorType, latencyMs,
+ *             inputTokens, outputTokens, costUsd) + derived "totalTokens"
+ *   - runs:   RunSummary fields (durationMs, computeMs, stepCount, costUsd,
+ *             outcome, agentName, primaryModel→"model", userId, ...)
+ *   - traces: TraceSummary fields (durationMs, costUsd, outcome, agentName, ...)
+ */
 export type CompiledPredicate =
   | { kind: "compare"; column: string; op: FilterOp; value: unknown }
   | { kind: "timeRange"; column: string; from: string; to: string };
 
-/** The aggregate expression to compute, resolved to physical columns. */
+/** The aggregate expression to compute, over a logical field (see note above). */
 export type CompiledMetric =
   | { kind: "count"; alias: string }
   | { kind: "count_distinct"; column: string; alias: string }
@@ -148,6 +162,20 @@ export interface InsertResult {
 }
 
 /**
+ * The lean result an adapter returns from `aggregate`. The adapter measures its
+ * own execution latency and shapes columns/rows; the query service wraps this
+ * into a `QueryResult` by attaching the plan + chart hint (it owns those).
+ */
+export interface AggregateResult {
+  columns: ResultColumn[];
+  rows: Array<Record<string, CellValue>>;
+  rowCount: number;
+  /** Storage-side execution time in ms (the visible "query latency"). */
+  latencyMs: number;
+  engine: StorageEngine;
+}
+
+/**
  * The storage port. Adapters own how `runs`/`traces` rollups are derived
  * (DuckDB: views/rollup tables; ClickHouse: AggregatingMergeTree MVs) — the rest
  * of the system never sees that.
@@ -158,7 +186,7 @@ export interface EventStore {
   /** Insert a batch of rows; idempotent by eventId. */
   insertBatch(rows: EventRow[]): Promise<InsertResult>;
   /** Execute a compiled analytics query. */
-  aggregate(query: CompiledQuery): Promise<QueryResult>;
+  aggregate(query: CompiledQuery): Promise<AggregateResult>;
   /** List traces for the explorer. */
   listTraces(filter: TraceFilter): Promise<TraceSummary[]>;
   /** Fetch one trace with its runs + event timeline. */
