@@ -30,7 +30,7 @@ export const Outcome = z.enum(OUTCOMES);
 export type Outcome = z.infer<typeof Outcome>;
 
 /** Time bucket granularity for time-series queries. */
-export const TIME_GRAINS = ["minute", "hour", "day"] as const;
+export const TIME_GRAINS = ["second", "minute", "hour", "day"] as const;
 export const TimeGrain = z.enum(TIME_GRAINS);
 export type TimeGrain = z.infer<typeof TimeGrain>;
 

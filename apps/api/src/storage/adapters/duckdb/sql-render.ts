@@ -42,7 +42,7 @@ const FILTER_OP_SQL = {
 } as const;
 
 function grainSql(grain: TimeGrain): string {
-  // DuckDB date_trunc accepts 'minute' | 'hour' | 'day' directly.
+  // DuckDB date_trunc accepts 'second' | 'minute' | 'hour' | 'day' directly.
   return grain;
 }
 

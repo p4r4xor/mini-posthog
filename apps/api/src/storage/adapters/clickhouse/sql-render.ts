@@ -79,6 +79,8 @@ const FILTER_OP_SQL = {
 /** Time-bucket function per grain. */
 function bucketFn(grain: TimeGrain): string {
   switch (grain) {
+    case "second":
+      return "toStartOfSecond"; // requires DateTime64 — our timestamp column is
     case "minute":
       return "toStartOfMinute";
     case "hour":

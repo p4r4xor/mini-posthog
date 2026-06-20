@@ -67,6 +67,11 @@ describe("composePlan — broad slot-based coverage (beyond the catalog)", () =>
     expect(p.sort).toEqual({ by: "time", dir: "asc" });
   });
 
+  it("supports second-level granularity: 'per second'", async () => {
+    const p = await plan("average LLM latency by model per second");
+    expect(p.dimensions).toContainEqual({ time: "second" });
+  });
+
   it("which models cost the most → ranking: sum(costUsd) by model desc, limited", async () => {
     const p = await plan("which models cost the most");
     expect(p.metric).toMatchObject({ agg: "sum", field: "costUsd" });
