@@ -3,6 +3,13 @@
   "version": "0.0.0",
   "private": true,
   "type": "module",
+  "exports": {
+    "./storage": "./src/storage/index.ts",
+    "./store-factory": "./src/storage/store-factory.ts",
+    "./compiler": "./src/query/compiler/index.ts",
+    "./planner": "./src/query/planner/index.ts",
+    "./config": "./src/config.ts"
+  },
   "scripts": {
     "dev": "tsx watch src/index.ts",
     "start": "tsx src/index.ts",

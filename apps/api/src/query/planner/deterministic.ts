@@ -120,7 +120,12 @@ const topFailingTools: Template = (text, ctx) => {
       level: "event",
       metric: { agg: "count" },
       dimensions: ["toolName"],
-      filters: [{ field: "status", op: "eq", value: "failed" }],
+      // Scope to tool_call events so failed non-tool events (e.g. failed
+      // llm_calls, run-fatal errors with no tool) don't bucket under a null tool.
+      filters: [
+        { field: "eventType", op: "eq", value: "tool_call" },
+        { field: "status", op: "eq", value: "failed" },
+      ],
       timeRange: ctx.timeRange,
       sort: { by: "metric", dir: "desc" },
       limit: 10,
@@ -207,7 +212,9 @@ const errorRateByTool: Template = (text, ctx) => {
         },
       },
       dimensions: ["toolName"],
-      filters: [],
+      // Scope to tool_call events: error rate = failed tool_calls / all tool_calls
+      // per tool, so non-tool failures don't appear under a null tool bucket.
+      filters: [{ field: "eventType", op: "eq", value: "tool_call" }],
       timeRange: ctx.timeRange,
       chartHint: "bar",
     };

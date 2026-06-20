@@ -26,3 +26,6 @@ clickhouse-data/
 # editor
 .vscode/
 .idea/
+
+# bench outputs
+bench/results/

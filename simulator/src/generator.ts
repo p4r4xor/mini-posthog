@@ -216,16 +216,12 @@ function* generateRun(
           }
         }
         if (!recovered) {
-          // Emit an error event for the exhausted/fatal failure.
-          const errLatency = skewed(rng, tool.latencyMs[0], tool.latencyMs[1]);
-          yield {
-            kind: "error",
-            errorType: pick(rng, ERROR_TYPES),
-            message: `${tool.name} failed after retries`,
-            toolName: tool.name,
-            latencyMs: round2(errLatency),
-            at: clock.advance(errLatency),
-          };
+          // Tool exhausted its retries → record a FAILED tool_call: a tool call
+          // owns its outcome (status="failed"), exactly like a failed llm_call.
+          // This is what makes "which tools fail the most" / "error rate by tool"
+          // group cleanly by toolName. (error events are reserved for run-level
+          // aborts that aren't a specific tool failure — see below.)
+          yield* emitToolCall(rng, clock, tool, "failed");
           runHadError = true;
         } else {
           yield* emitToolCall(rng, clock, tool, "success");

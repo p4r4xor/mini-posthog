@@ -15,11 +15,16 @@
  *  - `ReplacingMergeTree` with `event_id` LAST in the ORDER BY: duplicate event_ids
  *    collapse at merge time (our durable, eventual dedup backstop). Events are
  *    immutable, so RMT is used purely for dedup, never for mutable-status updates.
- *  - `PARTITION BY toYYYYMM(timestamp)` and
- *    `ORDER BY (project_id, toDate(timestamp), event_type, event_id)` —
- *    low-cardinality + date-first prefix for cheap partition pruning / sparse PK
- *    skips on the universal time + tenant filters; `event_id` last gives the RMT
- *    dedup key without polluting the filter prefix.
+ *  - `PARTITION BY toDate(timestamp)` (DAILY) and
+ *    `ORDER BY (project_id, event_type, timestamp, event_id)`. Daily (not monthly)
+ *    partitioning is the right call at the design target of up to 1B events/day:
+ *    one day ≈ 1B rows is already a large, right-sized partition; retention/TTL is
+ *    day-granular (drop the oldest day = O(1) partition drop); and recent-time
+ *    queries prune to a handful of partitions. Monthly would make 30B-row
+ *    partitions — unwieldy for merges/TTL. (365 partitions/yr is well under CH's
+ *    keep-it-under-~1–2k guidance.) The day is now the partition, so `toDate` is
+ *    dropped from the sort key; `event_id` last gives the RMT dedup key without
+ *    polluting the filter prefix.
  *  - data-skipping bloom-filter indexes on `trace_id` / `run_id`: the
  *    aggregation-optimized sort key does NOT give fast single-id explorer point
  *    lookups, so we resolve them with skip indexes rather than wrecking the sort
@@ -58,8 +63,8 @@ CREATE TABLE IF NOT EXISTS ${db}.events (
   INDEX idx_run   run_id   TYPE bloom_filter GRANULARITY 4
 )
 ENGINE = ReplacingMergeTree
-PARTITION BY toYYYYMM(timestamp)
-ORDER BY (project_id, toDate(timestamp), event_type, event_id);
+PARTITION BY toDate(timestamp)
+ORDER BY (project_id, event_type, timestamp, event_id);
 `;
 }
 

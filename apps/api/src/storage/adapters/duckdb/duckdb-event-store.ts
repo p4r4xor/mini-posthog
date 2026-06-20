@@ -13,7 +13,7 @@ import type {
   TraceFilter,
   TraceSummary,
 } from "@ata/contracts";
-import { type DuckDBConnection, DuckDBInstance } from "@duckdb/node-api";
+import { type DuckDBConnection, DuckDBInstance, timestampValue } from "@duckdb/node-api";
 import { SCHEMA_DDL } from "./schema.js";
 import { renderAggregate } from "./sql-render.js";
 
@@ -114,6 +114,65 @@ export class DuckDBEventStore implements EventStore {
     const after = await this.countEvents();
     const inserted = after - before;
     return { inserted, duplicates: rows.length - inserted };
+  }
+
+  /**
+   * FAST, NON-idempotent bulk load — benchmark/loader use ONLY.
+   *
+   * Unlike `insertBatch` (which keeps idempotency via the event_id PRIMARY KEY +
+   * `ON CONFLICT DO NOTHING`, paying a per-row prepared INSERT and two COUNT
+   * scans), this path uses the DuckDB Appender: a columnar, set-at-a-time writer
+   * that streams rows straight into the table with no conflict handling and no
+   * round-trip per row. The CALLER GUARANTEES every `event_id` is unique — if a
+   * duplicate slips in, the PRIMARY KEY constraint throws on flush. It returns the
+   * number of rows appended.
+   *
+   * Append order MUST match the `events` column order in schema.ts exactly:
+   * event_id, trace_id, run_id, project_id, event_type, timestamp, agent_name,
+   * user_id, step_index, model, tool_name, status, error_type, latency_ms,
+   * input_tokens, output_tokens, cost_usd, metadata.
+   */
+  async bulkInsert(rows: EventRow[]): Promise<number> {
+    if (rows.length === 0) return 0;
+    const conn = this.conn();
+
+    const appender = await conn.createAppender("events");
+    for (const row of rows) {
+      appender.appendVarchar(row.eventId);
+      appender.appendVarchar(row.traceId);
+      appender.appendVarchar(row.runId);
+      appender.appendVarchar(row.projectId);
+      appender.appendVarchar(row.eventType);
+      // ms epoch → µs (DuckDB TIMESTAMP is microsecond precision).
+      appender.appendTimestamp(timestampValue(BigInt(Date.parse(row.timestamp)) * 1000n));
+      appender.appendVarchar(row.agentName);
+      appender.appendVarchar(row.userId);
+      appender.appendInteger(row.stepIndex);
+      row.model === null ? appender.appendNull() : appender.appendVarchar(row.model);
+      row.toolName === null
+        ? appender.appendNull()
+        : appender.appendVarchar(row.toolName);
+      row.status === null ? appender.appendNull() : appender.appendVarchar(row.status);
+      row.errorType === null
+        ? appender.appendNull()
+        : appender.appendVarchar(row.errorType);
+      row.latencyMs === null
+        ? appender.appendNull()
+        : appender.appendDouble(row.latencyMs);
+      row.inputTokens === null
+        ? appender.appendNull()
+        : appender.appendBigInt(BigInt(row.inputTokens));
+      row.outputTokens === null
+        ? appender.appendNull()
+        : appender.appendBigInt(BigInt(row.outputTokens));
+      row.costUsd === null ? appender.appendNull() : appender.appendDouble(row.costUsd);
+      appender.appendVarchar(JSON.stringify(row.metadata ?? {}));
+      appender.endRow();
+    }
+    appender.flushSync();
+    appender.closeSync();
+
+    return rows.length;
   }
 
   private async countEvents(): Promise<number> {

@@ -77,6 +77,34 @@ importers:
         specifier: ^8.0.16
         version: 8.0.16(@types/node@26.0.0)
 
+  bench:
+    dependencies:
+      '@ata/api':
+        specifier: workspace:*
+        version: link:../apps/api
+      '@ata/contracts':
+        specifier: workspace:*
+        version: link:../packages/contracts
+      '@ata/sdk':
+        specifier: workspace:*
+        version: link:../packages/sdk
+      '@ata/simulator':
+        specifier: workspace:*
+        version: link:../simulator
+      '@clickhouse/client':
+        specifier: ^1.21.0
+        version: 1.21.0
+      '@duckdb/node-api':
+        specifier: 1.5.4-r.1
+        version: 1.5.4-r.1
+    devDependencies:
+      '@types/node':
+        specifier: ^26.0.0
+        version: 26.0.0
+      tsx:
+        specifier: ^4.22.4
+        version: 4.22.4
+
   packages/contracts:
     dependencies:
       zod:

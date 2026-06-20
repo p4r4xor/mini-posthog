@@ -1,21 +1,19 @@
 {
-  "name": "@ata/simulator",
+  "name": "@ata/bench",
   "version": "0.0.0",
   "private": true,
   "type": "module",
-  "exports": {
-    "./generator": "./src/generator.ts",
-    "./run-simulation": "./src/run-simulation.ts",
-    "./rng": "./src/rng.ts",
-    "./profiles": "./src/profiles.ts"
-  },
   "scripts": {
-    "start": "tsx src/index.ts",
+    "bench": "tsx src/index.ts",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
+    "@ata/api": "workspace:*",
     "@ata/contracts": "workspace:*",
-    "@ata/sdk": "workspace:*"
+    "@ata/sdk": "workspace:*",
+    "@ata/simulator": "workspace:*",
+    "@clickhouse/client": "^1.21.0",
+    "@duckdb/node-api": "1.5.4-r.1"
   },
   "devDependencies": {
     "@types/node": "^26.0.0",

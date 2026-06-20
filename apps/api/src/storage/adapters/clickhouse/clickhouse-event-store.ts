@@ -118,6 +118,29 @@ export class ClickHouseEventStore implements EventStore {
     return { inserted, duplicates: rows.length - inserted };
   }
 
+  /**
+   * FAST, NON-idempotent bulk load — benchmark/loader use ONLY.
+   *
+   * Unlike `insertBatch` (which dedups-before-insert by querying which event_ids
+   * already exist — an O(N) scan over a growing table run once per batch, i.e.
+   * the O(N²) overhead that made the harness unusable), this path skips ALL dedup
+   * and issues a single `INSERT … JSONEachRow`. The CALLER GUARANTEES every
+   * `event_id` is unique. Returns the number of rows sent.
+   */
+  async bulkInsert(rows: EventRow[]): Promise<number> {
+    if (rows.length === 0) return 0;
+    const client = this.c();
+
+    const values = rows.map(toInsertRow);
+    await client.insert({
+      table: "events",
+      values,
+      format: "JSONEachRow",
+    });
+
+    return values.length;
+  }
+
   async aggregate(query: CompiledQuery, projectId: string): Promise<AggregateResult> {
     const client = this.c();
     // Tenant scoping is enforced here, always — prepend a projectId predicate so no
