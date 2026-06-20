@@ -11,9 +11,9 @@ explorer.
 - **Original assignment:** [`docs/TASK.md`](docs/TASK.md).
 
 ```
-SDK ─HTTP/JSON or gRPC─▶ /capture ─▶ EventQueue (Redis Streams) ─▶ Worker ─▶ EventStore (DuckDB│ClickHouse)
-        │ validate + externalize payload → BlobStore (FS│S3)                 ▲
-        └ 202 / 429 (backpressure)                          NL query ─▶ planner → compiler → aggregate → chart
+SDK --(HTTP/JSON or gRPC)--> /capture --> EventQueue (Redis Streams) --> Worker --> EventStore (DuckDB | ClickHouse)
+        validate + externalize payload --> BlobStore (FS | S3)
+        202 / 429 (backpressure)            NL query --> planner --> compiler --> aggregate --> chart
 ```
 
 ## Packages
@@ -21,15 +21,15 @@ SDK ─HTTP/JSON or gRPC─▶ /capture ─▶ EventQueue (Redis Streams) ─▶
 | Path | What |
 | --- | --- |
 | `packages/contracts` | Shared Zod schemas + types: the wire `CaptureEvent`, `QueryPlan` IR, `QueryResult`, `EventStore` port - the contract everything depends on |
-| `packages/sdk` | TS logging SDK: hierarchical trace→run→event, count/time batching, retry w/ backoff, bounded-queue backpressure, `flush`/`shutdown` |
-| `apps/api` | Ingestion (HTTP + gRPC → queue → worker → store), NL query, trace explorer |
+| `packages/sdk` | TS logging SDK: hierarchical trace->run->event, count/time batching, retry w/ backoff, bounded-queue backpressure, `flush`/`shutdown` |
+| `apps/api` | Ingestion (HTTP + gRPC -> queue -> worker -> store), NL query, trace explorer |
 | `apps/web` | React + Recharts UI: NL query + charts + trace explorer |
 | `simulator` | Toy agent simulator - generates realistic traces **through the SDK** (demo + ~1M) |
 | `bench` | Storage benchmark (DuckDB vs ClickHouse) + transport benchmark (gRPC vs HTTP) |
 
 ## Prerequisites
 
-- **Node ≥ 20**, **pnpm 8+**
+- **Node >= 20**, **pnpm 8+**
 - **Docker** - only for the ClickHouse + Redis path; the DuckDB quick-start needs nothing.
 
 ```bash
@@ -75,7 +75,7 @@ pnpm --filter @ata/simulator exec tsx src/index.ts \
   --api-key dev_project_key  --days 7  --seed 1
 ```
 
-`demo` ≈ 2,000 events; `benchmark` ≈ 1,000,000. Deterministic (seeded), spreads events
+`demo` ~ 2,000 events; `benchmark` ~ 1,000,000. Deterministic (seeded), spreads events
 over a historical window, multiple agents/models/tools, successes + failures + retries.
 
 ## Benchmarks
@@ -114,17 +114,17 @@ service.
 | `ATA_QUEUE` | `memory` | ingestion queue: `memory` \| `redis` |
 | `ATA_REDIS_URL` | `redis://localhost:6379` | Redis Streams URL |
 | `ATA_BLOB_DIR` | `<cwd>/data/blobs` | externalized-payload dir (FS blob store) |
-| `ATA_MAX_QUEUE_DEPTH` | `100000` | edge backpressure threshold (→ 429) |
+| `ATA_MAX_QUEUE_DEPTH` | `100000` | edge backpressure threshold (-> 429) |
 | `ATA_WORKER_BATCH` / `_MS` | `5000` / `1000` | worker insert batch size / max wait |
 | `ATA_CH_URL/USER/PASSWORD/DATABASE` | `http://localhost:8123` / `ata` / `ata` / `ata` | ClickHouse connection |
 | `ANTHROPIC_API_KEY` | - | optional; enables the LLM fallback planner |
 
-Local project/API-key are hardcoded for dev: API key **`dev_project_key`** → project
+Local project/API-key are hardcoded for dev: API key **`dev_project_key`** -> project
 **`proj_dev`**.
 
 ## Supported natural-language queries
 
-Deterministic-first (no API key needed): exact catalog templates → a slot composer →
+Deterministic-first (no API key needed): exact catalog templates -> a slot composer ->
 time-range parsing; an optional Claude fallback (`ANTHROPIC_API_KEY`) covers the long tail.
 Full grammar in `docs/architecture.md` under Query translation approach. Representative examples:
 
@@ -135,9 +135,9 @@ Full grammar in `docs/architecture.md` under Query translation approach. Represe
 - **Composer families** (`<agg> <measure> by <dimension> [over <grain>] [top N]`): *"total
   cost by user"*, *"p99 LLM latency by model"*, *"number of llm calls by model"*, *"errors
   by error type"*, *"average run duration by agent"*, *"which models cost the most"*.
-- **Time ranges:** *"… on 20/06/2026"*, *"… last 24 hours"*, *"… yesterday"*, *"… this
-  week"*, *"… between June 1 and June 10"*, *"… since June 15"*.
-- **Grains:** *"… per second / minute / hour / day / week / month"*.
+- **Time ranges:** *"... on 20/06/2026"*, *"... last 24 hours"*, *"... yesterday"*, *"... this
+  week"*, *"... between June 1 and June 10"*, *"... since June 15"*.
+- **Grains:** *"... per second / minute / hour / day / week / month"*.
 
 Unsupported questions are rejected cleanly with the supported list (never guessed, never
 run as raw SQL).
@@ -146,5 +146,5 @@ run as raw SQL).
 
 Per the brief: production auth, billing, cloud deploy, complex permissions, full
 multi-tenant account management, pixel-perfect UI. Documented production-but-not-built
-items (gRPC→full OTLP, AggregatingMergeTree rollup MVs, Kafka/Redpanda, S3 blob store,
+items (gRPC->full OTLP, AggregatingMergeTree rollup MVs, Kafka/Redpanda, S3 blob store,
 cold-Parquet tiering) are in `docs/architecture.md` under Notes on what was intentionally skipped.
