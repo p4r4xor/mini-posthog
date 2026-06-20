@@ -126,6 +126,7 @@ export type CompiledMetric =
   | { kind: "count"; alias: string }
   | { kind: "count_distinct"; column: string; alias: string }
   | { kind: "simple"; fn: "sum" | "avg" | "min" | "max"; column: string; alias: string }
+  | { kind: "quantile"; column: string; p: number; alias: string }
   | {
       kind: "ratio";
       numerator: CompiledPredicate[];

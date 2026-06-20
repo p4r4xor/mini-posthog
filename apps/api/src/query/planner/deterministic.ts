@@ -38,6 +38,48 @@ function hasAny(text: string, ...needles: (string | RegExp)[]): boolean {
 
 type Template = (text: string, ctx: PlanContext) => QueryPlan | null;
 
+/**
+ * Percentile latency (p50/p90/p95/p99 or "median") → event, quantile(latencyMs).
+ * Ordered before the avg template so "p95 latency by model" maps to a quantile.
+ */
+const percentileLatency: Template = (text, ctx) => {
+  const isLatency = hasAny(text, "latency", "latencies");
+  if (!isLatency) return null;
+
+  let p: number | null = null;
+  const m = text.match(/\bp(\d{2,3})\b/) ?? text.match(/(\d{2,3})th percentile/);
+  if (m && m[1]) {
+    const n = Number(m[1]);
+    if (n > 0 && n < 100) p = n / 100;
+  } else if (hasAny(text, "median")) {
+    p = 0.5;
+  } else if (has(text, "percentile")) {
+    p = 0.95;
+  }
+  if (p === null) return null;
+
+  const byModel = has(text, "model");
+  const byTool = has(text, "tool");
+  const overTime = hasAny(text, "over time", /per (hour|day|minute)/, "trend");
+
+  const dimensions: QueryPlan["dimensions"] = [];
+  if (byModel) dimensions.push("model");
+  if (byTool) dimensions.push("toolName");
+  if (overTime) dimensions.push({ time: "hour" });
+
+  const eventType = byTool && !byModel ? "tool_call" : "llm_call";
+
+  return {
+    level: "event",
+    metric: { agg: "quantile", field: "latencyMs", p },
+    dimensions,
+    filters: [{ field: "eventType", op: "eq", value: eventType }],
+    timeRange: ctx.timeRange,
+    sort: overTime ? { by: "time", dir: "asc" } : { by: "metric", dir: "desc" },
+    chartHint: overTime ? "line" : "bar",
+  };
+};
+
 /** Avg LLM latency by model over time → event, avg(latencyMs), [model, time(hour)], line. */
 const avgLlmLatencyByModelOverTime: Template = (text, ctx) => {
   const isLatency = hasAny(text, "latency", "latencies");
@@ -197,6 +239,7 @@ const avgStepsPerRunByOutcome: Template = (text, ctx) => {
  * specific "error rate by tool" must run before the broader "top failing tools".
  */
 const TEMPLATES: Template[] = [
+  percentileLatency,
   avgLlmLatencyByModelOverTime,
   errorRateByTool,
   topFailingTools,

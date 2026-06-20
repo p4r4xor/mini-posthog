@@ -100,6 +100,14 @@ function compileMetric(plan: QueryPlan): CompiledMetric {
         alias: METRIC_ALIAS,
       };
 
+    case "quantile":
+      return {
+        kind: "quantile",
+        column: requireField(field, agg),
+        p: requireQuantile(plan.metric.p),
+        alias: METRIC_ALIAS,
+      };
+
     case "ratio": {
       // `ratio` validity (presence of spec) is guaranteed by QueryPlan.parse.
       if (!ratio) {
@@ -189,4 +197,12 @@ function requireField(field: string | undefined, agg: string): string {
     throw new Error(`aggregation '${agg}' requires metric.field`);
   }
   return field;
+}
+
+/** Guard: quantile requires a fraction in (0,1) (guaranteed by QueryPlan.parse). */
+function requireQuantile(p: number | undefined): number {
+  if (p === undefined) {
+    throw new Error("quantile metric requires metric.p");
+  }
+  return p;
 }

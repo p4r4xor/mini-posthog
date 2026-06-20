@@ -89,6 +89,38 @@ describe("QueryPlan validation", () => {
     expect(parsed.success).toBe(false);
   });
 
+  it("accepts a p95 latency quantile (event grain)", () => {
+    const parsed = QueryPlan.safeParse({
+      level: "event",
+      metric: { agg: "quantile", field: "latencyMs", p: 0.95 },
+      dimensions: ["model"],
+      filters: [{ field: "eventType", op: "eq", value: "llm_call" }],
+      timeRange,
+      chartHint: "bar",
+    });
+    expect(parsed.success).toBe(true);
+  });
+
+  it("rejects a quantile metric without p", () => {
+    const parsed = QueryPlan.safeParse({
+      level: "event",
+      metric: { agg: "quantile", field: "latencyMs" },
+      timeRange,
+      chartHint: "bar",
+    });
+    expect(parsed.success).toBe(false);
+  });
+
+  it("rejects p on a non-quantile metric", () => {
+    const parsed = QueryPlan.safeParse({
+      level: "event",
+      metric: { agg: "avg", field: "latencyMs", p: 0.95 },
+      timeRange,
+      chartHint: "bar",
+    });
+    expect(parsed.success).toBe(false);
+  });
+
   it("rejects count_distinct over a non-identifier field", () => {
     const parsed = QueryPlan.safeParse({
       level: "event",

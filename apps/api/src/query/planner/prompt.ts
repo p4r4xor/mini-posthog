@@ -38,10 +38,12 @@ export function buildSystemPrompt(): string {
     "  - run/trace: reads rollups. Measures: " + ROLLUP_MEASURES.join(", ") + ".",
     "  - latencyMs is EVENT grain only; durationMs/computeMs/stepCount are run/trace grain only.",
     "",
-    "AGGREGATIONS (metric.agg): count, count_distinct, sum, avg, min, max, ratio.",
+    "AGGREGATIONS (metric.agg): count, count_distinct, sum, avg, min, max, ratio, quantile.",
     "  - count needs no field.",
     "  - count_distinct.field must be one of: " + DISTINCT_FIELDS.join(", ") + ".",
     "  - sum/avg/min/max require metric.field (a measure valid at the chosen grain).",
+    "  - quantile requires metric.field (a numeric measure) AND metric.p in (0,1),",
+    "    e.g. p95 latency → { agg: 'quantile', field: 'latencyMs', p: 0.95 }.",
     "  - ratio requires metric.ratio { numerator: Filter[], denominator: Filter[] }",
     "    and no metric.field; it computes countIf(numerator)/countIf(denominator).",
     "",
@@ -110,7 +112,16 @@ export function buildInputSchema(): Record<string, unknown> {
         properties: {
           agg: {
             type: "string",
-            enum: ["count", "count_distinct", "sum", "avg", "min", "max", "ratio"],
+            enum: [
+              "count",
+              "count_distinct",
+              "sum",
+              "avg",
+              "min",
+              "max",
+              "ratio",
+              "quantile",
+            ],
           },
           field: {
             type: "string",
@@ -122,6 +133,7 @@ export function buildInputSchema(): Record<string, unknown> {
               ]),
             ],
           },
+          p: { type: "number", exclusiveMinimum: 0, exclusiveMaximum: 1 },
           ratio: {
             type: "object",
             additionalProperties: false,

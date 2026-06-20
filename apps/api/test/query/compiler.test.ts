@@ -216,6 +216,17 @@ describe("compilePlan — invariants & negative checks", () => {
     expect("column" in q.metric).toBe(false);
   });
 
+  it("compiles a quantile metric (p95 latency) carrying its fraction", () => {
+    const q = compilePlan({
+      level: "event",
+      metric: { agg: "quantile", field: "latencyMs", p: 0.95 },
+      dimensions: ["model"],
+      timeRange,
+      chartHint: "bar",
+    });
+    expect(q.metric).toMatchObject({ kind: "quantile", column: "latencyMs", p: 0.95 });
+  });
+
   it("timeRange predicate is always present, even with zero filters/dimensions", () => {
     const q = compilePlan({
       level: "event",

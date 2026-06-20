@@ -150,6 +150,24 @@ describe("DuckDBEventStore", () => {
     expect(byModel["claude-4.5"]).toBe(1500);
   });
 
+  it("aggregates a latency quantile (p95) over events", async () => {
+    await store.insertBatch(sampleEvents());
+    const query: CompiledQuery = {
+      source: "events",
+      metric: { kind: "quantile", column: "latencyMs", p: 0.95, alias: "value" },
+      groupBy: [],
+      where: [{ kind: "timeRange", column: "timestamp", ...TIME_RANGE }],
+    };
+    const res = await store.aggregate(query);
+    expect(res.rows).toHaveLength(1);
+    // p95 of all event latencies (800,1200,600,900,1500,...) is a finite number
+    // near the top of the range; assert it's numeric and within bounds.
+    const value = res.rows[0]?.value as number;
+    expect(typeof value).toBe("number");
+    expect(value).toBeGreaterThan(900);
+    expect(value).toBeLessThanOrEqual(1500);
+  });
+
   it("aggregates avg costUsd by model at the run grain", async () => {
     await store.insertBatch(sampleEvents());
     const query: CompiledQuery = {

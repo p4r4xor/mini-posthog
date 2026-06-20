@@ -58,6 +58,16 @@ describe("deterministic catalog coverage", () => {
     );
   });
 
+  it("p95 LLM latency by model → quantile (deterministic, beats the avg template)", async () => {
+    const r = expectOk(await planQuery("p95 LLM latency by model", { now: NOW }));
+    expect(r.source).toBe("deterministic");
+    const p = r.plan;
+    expect(p.level).toBe("event");
+    expect(p.metric).toMatchObject({ agg: "quantile", field: "latencyMs", p: 0.95 });
+    expect(p.dimensions).toContainEqual("model");
+    expect(p.filters).toContainEqual({ field: "eventType", op: "eq", value: "llm_call" });
+  });
+
   it("which tools fail the most", async () => {
     const r = expectOk(await planQuery("which tools fail the most?", { now: NOW }));
     expect(r.source).toBe("deterministic");

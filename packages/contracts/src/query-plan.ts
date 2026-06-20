@@ -27,6 +27,7 @@ export const Aggregation = z.enum([
   "min",
   "max",
   "ratio",
+  "quantile",
 ]);
 export type Aggregation = z.infer<typeof Aggregation>;
 
@@ -121,6 +122,8 @@ export type RatioSpec = z.infer<typeof RatioSpec>;
 export const Metric = z.object({
   agg: Aggregation,
   field: MetricField.optional(),
+  /** Quantile fraction in (0,1) — required when agg is "quantile" (0.95 = p95). */
+  p: z.number().gt(0).lt(1).optional(),
   ratio: RatioSpec.optional(),
 });
 export type Metric = z.infer<typeof Metric>;
@@ -180,6 +183,30 @@ export const QueryPlan = z
         code: z.ZodIssueCode.custom,
         path: ["metric", "field"],
         message: `agg '${agg}' requires metric.field`,
+      });
+    }
+
+    // quantile needs p in (0,1) over a numeric measure; p is meaningless elsewhere
+    if (agg === "quantile") {
+      if (plan.metric.p === undefined) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["metric", "p"],
+          message: "quantile metric requires metric.p in (0,1), e.g. 0.95 for p95",
+        });
+      }
+      if (field && DISTINCT_FIELD_SET.has(field)) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["metric", "field"],
+          message: "quantile requires a numeric measure field, not an identifier",
+        });
+      }
+    } else if (plan.metric.p !== undefined) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["metric", "p"],
+        message: "metric.p is only valid when agg is 'quantile'",
       });
     }
 

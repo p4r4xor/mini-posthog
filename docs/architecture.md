@@ -181,15 +181,29 @@ specifically penalizes; the dense-schema win is erased by null compression anywa
   materialized views** fired on insert. Hot `metadata` keys → **materialized
   columns**; high-cardinality filters → **bloom-filter skip indexes / projections**.
 
+### Production storage refinements (ClickHouse adapter)
+
+Decisions validated against independent design passes (PostHog/Langfuse + LLM critiques) and folded into the CH adapter (the DuckDB adapter gets equivalents for free via automatic dictionary compression):
+
+- **Column types:** `Enum8` for `event_type` (a *closed* 7-value set — 1 byte, validated at insert); `LowCardinality(String)` for the *open* bounded sets (`agent_name`, `model`, `tool_name`, `status`, `error_type`) — dictionary-encoded, so `GROUP BY model` is near-free; `Decimal(12,6)` for `cost_usd` (exact money; float sums of many tiny costs drift); `DateTime64(3)`; `Nullable` only on sparse measures.
+- **Idempotency:** ClickHouse has no unique constraint / no `ON CONFLICT`, so the DuckDB PK trick doesn't port. Use **`ReplacingMergeTree`** with `event_id` last in the `ORDER BY` — duplicate `event_id`s collapse at merge time. **Caveat:** RMT dedup is *eventual* (merge-time); until a merge runs, duplicates are visible, and `SELECT … FINAL` (which forces correctness) is expensive. So we pair RMT with **API-side dedup by `event_id`** (ingestion, §12) so reads never need `FINAL`. Our events are immutable, so RMT is used purely for dedup, never for mutable-status updates.
+- **Sort key:** `PARTITION BY toYYYYMM(timestamp)`; `ORDER BY (project_id, toDate(timestamp), event_type, …, event_id)` — date-first (universal time filters + better downstream compression), `event_id` last for the RMT dedup key without polluting the filter prefix.
+- **Point lookups vs aggregation:** the aggregation-optimized sort key does *not* give fast single-`trace_id` lookups for the explorer. Resolve with a **bloom-filter skip index / `PROJECTION` on `trace_id` + `run_id`**, not by making `trace_id` the primary key (which would wreck aggregation).
+- **Payload externalization (production):** `input`/`output` prompt & response text is large, high-entropy, and never aggregated — at 10B events it bloats the hot table. Production move (Langfuse/Helicone do this): store payload text in **S3/blob and keep only a reference + the analytical columns** in the event row. The prototype keeps text inline in `metadata`; the SDK could later mark a field as payload vs property. `metadata` itself is JSON (general; nested `tags`) + materialize hot keys — chosen over `Map(String,String)` (queryable but string-only) for generality.
+
+### Cross-grain filtering (known extension)
+
+The current `QueryPlan` expresses a metric at one grain. A genuine future need is an **event-grain metric filtered by a run/trace-grain attribute** (e.g. "token usage *for successful runs* by model"). We deliberately keep events pure (streaming-correct; no write-time outcome denormalization that would need mutations). When needed, the compiler will **join `events` → the much-smaller `runs` rollup on `run_id`** (a join to a 1-row-per-run table is cheap even in CH, or backed by a dictionary) — getting denormalized read-simplicity without the write-time-mutation problem.
+
 ### The EventStore seam
 
 ```ts
 interface EventStore {
   init(): Promise<void>
-  insertBatch(rows: EventRow[]): Promise<InsertResult>   // idempotent by eventId
-  aggregate(q: CompiledQuery): Promise<QueryResult>        // analytics
-  listTraces(f: TraceFilter): Promise<TraceSummary[]>      // explorer
-  getTrace(id: string): Promise<TraceDetail>
+  insertBatch(rows: EventRow[]): Promise<InsertResult>     // idempotent by eventId
+  aggregate(q: CompiledQuery): Promise<AggregateResult>     // analytics (adapter-timed)
+  listTraces(f: TraceFilter): Promise<TraceSummary[]>       // explorer
+  getTrace(projectId, traceId): Promise<TraceDetail | null>
   close(): Promise<void>
 }
 ```
@@ -247,7 +261,16 @@ table goes here once measured.
 sub-second single node, DuckDB sweet spot; 100M → both viable single node (CH
 ~148ms vs DuckDB ~348ms on ClickBench-class workloads); 1B → ClickHouse clustered
 wins by orders of magnitude, DuckDB runs but multi-user serving strains → either CH
-or DuckGres/DuckLake decoupled storage.
+or DuckGres/DuckLake decoupled storage. **10B:** Kafka shock-absorber in front of
+CH is mandatory (the API can't write to the DB synchronously); hot recent data in
+CH + cold history as Parquet in S3 (TTL-aged) keeps the disk bill sane.
+
+**Duckgres' real production value isn't embedded query — it's federated joins.**
+At scale the sharp use case is answering "cost per successful run for Pro-tier
+users" by joining trace events (cold, in S3/Parquet) with an *external* Postgres
+billing DB, in ephemeral DuckDB compute you pay for only while the query runs —
+something ClickHouse-alone handles poorly. That's the strongest argument for
+keeping the engine seam (and a DuckDB path) even if ClickHouse is the hot path.
 
 ---
 
@@ -273,7 +296,13 @@ QueryPlan {
   the outer aggregation. Event-level reads `events`; run/trace reads the rollups.
 - **`ratio`** = numerator predicate / denominator predicate (both counts), e.g.
   "error rate by tool" = `countIf(status='failed') / count(*)`.
+- **`quantile`** = a percentile over a numeric measure, with `metric.p` in (0,1),
+  e.g. "p95 LLM latency by model" = `{ agg:"quantile", field:"latencyMs", p:0.95 }`
+  → CH `quantile(0.95)(latency_ms)` / DuckDB `quantile_cont(latency_ms, 0.95)`.
+  Percentiles are first-class because avg latency hides tail behavior.
 - **`time` dimension** carries a grain (minute/hour/day) → bucketed timestamp.
+
+Full aggregation set: `count, count_distinct, sum, avg, min, max, ratio, quantile`.
 
 ### Supported-query catalog (reverse-engineered from the prompt)
 
@@ -380,6 +409,23 @@ await analytics.flush();
   queue (Kafka/Redis) → async workers → batched insert; big payloads pass references
   not values; dead-letter on repeated failure; horizontal worker scaling for
   backpressure.
+
+### Backpressure & idempotency (four layers)
+
+| Layer | Mechanism | Status |
+| --- | --- | --- |
+| SDK in-memory queue | bounded `maxQueueSize`, drop-newest + `onError` | built |
+| SDK → API transport | retry w/ exp backoff + jitter on `429`/`5xx` (server can push back) | built |
+| API ingestion | validate → batched write; **emit `429` when the buffer is full** | partial (429 shedding TODO) |
+| Kafka shock-absorber | decouples API from DB; CH outage → events buffer; backpressure = consumer lag, not a crash | documented |
+
+**Idempotency** is at-least-once + client-generated `eventId`. DuckDB enforces it
+with a PK (`ON CONFLICT DO NOTHING`); ClickHouse can't (no unique constraint), so
+it uses `ReplacingMergeTree` (eventual, merge-time dedup) **plus API-side `eventId`
+dedup** so reads avoid the expensive `FINAL`. ClickHouse's native
+insert-block dedup also catches byte-identical batch retries for free. The
+`EventStore` contract just says "idempotent insert"; each adapter satisfies it its
+own way — the rest of the system never knows.
 
 ---
 

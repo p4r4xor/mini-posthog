@@ -91,6 +91,12 @@ function renderMetric(
       const col = resolveField(source, metric.column);
       return `${metric.fn}(${col}) AS "${metric.alias}"`;
     }
+    case "quantile": {
+      const col = resolveField(source, metric.column);
+      // p is a validated number in (0,1); inlined as a numeric literal (no
+      // injection surface). DuckDB requires a constant fraction here.
+      return `quantile_cont(${col}, ${Number(metric.p)}) AS "${metric.alias}"`;
+    }
     case "ratio": {
       const num = renderCountIf(source, metric.numerator, bag);
       const den = renderCountIf(source, metric.denominator, bag);
