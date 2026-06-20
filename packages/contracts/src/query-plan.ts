@@ -2,7 +2,7 @@ import { z } from "zod";
 import { IsoTimestamp, TimeGrain } from "./common.js";
 
 /**
- * QueryPlan — the typed intermediate representation between NL translation and the
+ * QueryPlan - the typed intermediate representation between NL translation and the
  * query engine (docs/architecture.md §9).
  *
  * We NEVER let natural language or an LLM produce SQL. A translator (deterministic
@@ -12,7 +12,7 @@ import { IsoTimestamp, TimeGrain } from "./common.js";
  * injection surface, and one plan compiles to both DuckDB and ClickHouse.
  *
  * The two sides (planner, compiler) depend ONLY on this type and never on each
- * other — so each is testable in isolation.
+ * other - so each is testable in isolation.
  */
 
 /** What one row represents before aggregation. Selects the source table. */
@@ -122,7 +122,7 @@ export type RatioSpec = z.infer<typeof RatioSpec>;
 export const Metric = z.object({
   agg: Aggregation,
   field: MetricField.optional(),
-  /** Quantile fraction in (0,1) — required when agg is "quantile" (0.95 = p95). */
+  /** Quantile fraction in (0,1) - required when agg is "quantile" (0.95 = p95). */
   p: z.number().gt(0).lt(1).optional(),
   ratio: RatioSpec.optional(),
 });

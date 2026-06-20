@@ -5,7 +5,7 @@ import type { QueryPlan, TimeRange } from "@ata/contracts";
  *
  * The planner is a hybrid: deterministic templates run first, then a
  * constrained LLM fills the same QueryPlan slots as a fallback. Nothing the LLM
- * emits is trusted — the hybrid layer is the safety boundary and re-validates
+ * emits is trusted - the hybrid layer is the safety boundary and re-validates
  * every plan with the QueryPlan Zod schema before returning it.
  */
 
@@ -22,7 +22,7 @@ export interface PlanContext {
  * tests inject a fake so the planner runs offline with no network.
  *
  * Returns `unknown` on purpose: the hybrid layer validates the result with
- * `QueryPlan.safeParse`, so the model only fills slots — nothing unvalidated
+ * `QueryPlan.safeParse`, so the model only fills slots - nothing unvalidated
  * ever reaches the compiler/engine.
  */
 export interface LlmPlanner {
@@ -34,13 +34,13 @@ export interface LlmPlanner {
 
 /**
  * The result of planning. A discriminated union so callers handle the
- * rejection path explicitly — we NEVER throw raw model output.
+ * rejection path explicitly - we NEVER throw raw model output.
  */
 export type PlanResult =
   | { ok: true; plan: QueryPlan; source: "deterministic" | "llm" }
   | { ok: false; reason: string; supported: string[] };
 
-/** Options for `planQuery` — all optional, with test-friendly injection points. */
+/** Options for `planQuery` - all optional, with test-friendly injection points. */
 export interface PlanOptions {
   /** Reference time; inject a fixed value for deterministic tests. */
   now?: Date;

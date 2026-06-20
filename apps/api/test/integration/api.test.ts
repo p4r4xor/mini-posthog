@@ -177,7 +177,7 @@ describe("POST /capture (async pipeline)", () => {
 
   it("externalizes payload: 4 KB text goes to the blob, not the queue/row", async () => {
     const big = "x".repeat(4096);
-    // `input` is a top-level field on run_started — the large payload.
+    // `input` is a top-level field on run_started - the large payload.
     await capture([
       {
         ...sampleEvents()[0],
@@ -188,7 +188,7 @@ describe("POST /capture (async pipeline)", () => {
     ]);
     await drain();
 
-    // Raw stored row keeps only a payloadRef (+ small props) — NOT the 4 KB text.
+    // Raw stored row keeps only a payloadRef (+ small props) - NOT the 4 KB text.
     const raw = await store.getTrace("proj_dev", "trace_1");
     const rawMeta = raw?.events[0]?.metadata as Record<string, unknown>;
     expect(typeof rawMeta.payloadRef).toBe("string");

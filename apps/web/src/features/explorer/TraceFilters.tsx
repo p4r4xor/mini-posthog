@@ -1,6 +1,6 @@
 /**
  * The explorer filter bar. A controlled form over the GET /traces query params
- * (time range + agentName/model/toolName/status/userId). It owns no fetching —
+ * (time range + agentName/model/toolName/status/userId). It owns no fetching -
  * it lifts the assembled params up to the parent on apply/reset.
  */
 import type { JSX, ReactNode } from "react";
@@ -12,7 +12,7 @@ interface TraceFiltersProps {
   loading: boolean;
 }
 
-/** Local form state — all strings so inputs stay controlled; trimmed on apply. */
+/** Local form state - all strings so inputs stay controlled; trimmed on apply. */
 interface FormState {
   from: string;
   to: string;

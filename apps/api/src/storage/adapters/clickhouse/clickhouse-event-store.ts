@@ -66,7 +66,7 @@ export class ClickHouseEventStore implements EventStore {
 
   private c(): ClickHouseClient {
     if (!this.client) {
-      throw new Error("ClickHouseEventStore not initialised — call init() first");
+      throw new Error("ClickHouseEventStore not initialised - call init() first");
     }
     return this.client;
   }
@@ -119,10 +119,10 @@ export class ClickHouseEventStore implements EventStore {
   }
 
   /**
-   * FAST, NON-idempotent bulk load — benchmark/loader use ONLY.
+   * FAST, NON-idempotent bulk load - benchmark/loader use ONLY.
    *
    * Unlike `insertBatch` (which dedups-before-insert by querying which event_ids
-   * already exist — an O(N) scan over a growing table run once per batch, i.e.
+   * already exist - an O(N) scan over a growing table run once per batch, i.e.
    * the O(N²) overhead that made the harness unusable), this path skips ALL dedup
    * and issues a single `INSERT … JSONEachRow`. The CALLER GUARANTEES every
    * `event_id` is unique. Returns the number of rows sent.
@@ -143,7 +143,7 @@ export class ClickHouseEventStore implements EventStore {
 
   async aggregate(query: CompiledQuery, projectId: string): Promise<AggregateResult> {
     const client = this.c();
-    // Tenant scoping is enforced here, always — prepend a projectId predicate so no
+    // Tenant scoping is enforced here, always - prepend a projectId predicate so no
     // query path can accidentally read across projects.
     const scoped: CompiledQuery = {
       ...query,
@@ -424,7 +424,7 @@ function mapEventRow(r: Record<string, unknown>): EventRow {
 }
 
 // ---------------------------------------------------------------------------
-// Value helpers (CH JSON encodes Decimals/UInt64 as strings — normalise)
+// Value helpers (CH JSON encodes Decimals/UInt64 as strings - normalise)
 // ---------------------------------------------------------------------------
 
 function str(v: unknown): string {

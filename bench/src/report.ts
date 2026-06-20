@@ -30,7 +30,7 @@ export interface BenchResults {
   engines: EngineSummary[];
 }
 
-const fmtMs = (n: number): string => (Number.isFinite(n) ? n.toFixed(2) : "—");
+const fmtMs = (n: number): string => (Number.isFinite(n) ? n.toFixed(2) : "-");
 const fmtInt = (n: number): string => n.toLocaleString("en-US");
 
 function fmtBytes(n: number): string {
@@ -55,7 +55,7 @@ export function printReport(results: BenchResults): void {
   console.log("");
   console.log("=".repeat(100));
   console.log(
-    `BENCHMARK — ${fmtInt(results.events)} events target · ${fmtInt(results.traces)} traces · ` +
+    `BENCHMARK - ${fmtInt(results.events)} events target · ${fmtInt(results.traces)} traces · ` +
       `${results.iterations} iterations · ${results.days}d window · seed ${results.seed}`,
   );
   console.log("=".repeat(100));
@@ -81,7 +81,7 @@ export function printReport(results: BenchResults): void {
     let rows = 0;
     for (const e of engines) {
       const t = e.timings[i];
-      line += `  ${pad(t ? fmtMs(t.p50Ms) : "—", cellW, "r")}  ${pad(t ? fmtMs(t.p95Ms) : "—", cellW, "r")}`;
+      line += `  ${pad(t ? fmtMs(t.p50Ms) : "-", cellW, "r")}  ${pad(t ? fmtMs(t.p95Ms) : "-", cellW, "r")}`;
       if (t) rows = t.rowCount;
     }
     line += `  ${pad(fmtInt(rows), 8, "r")}`;
@@ -131,7 +131,7 @@ export function toMarkdown(results: BenchResults): string {
     let row = `| ${queryNames[i]} | ${level} |`;
     for (const e of engines) {
       const t = e.timings[i];
-      row += ` ${t ? t.p50Ms.toFixed(2) : "—"} | ${t ? t.p95Ms.toFixed(2) : "—"} |`;
+      row += ` ${t ? t.p50Ms.toFixed(2) : "-"} | ${t ? t.p95Ms.toFixed(2) : "-"} |`;
     }
     lines.push(row);
   }

@@ -3,8 +3,8 @@
  *
  * For each engine × each catalog query: warm up (3 runs, JIT + CH connection +
  * OS page cache), then K timed iterations of `store.aggregate(compiled,
- * projectId)`. We measure WALL-CLOCK with performance.now() around the call —
- * i.e. the user-perceived latency including the ClickHouse HTTP round-trip — not
+ * projectId)`. We measure WALL-CLOCK with performance.now() around the call -
+ * i.e. the user-perceived latency including the ClickHouse HTTP round-trip - not
  * just the adapter's self-reported execution time. We report p50 and p95 (ms)
  * and the rowCount the query returned.
  */

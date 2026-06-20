@@ -41,6 +41,6 @@ export type IsoTimestamp = z.infer<typeof IsoTimestamp>;
 /** A non-empty identifier string. */
 export const Id = z.string().min(1);
 
-/** Free-form metadata bag — the JSON tail of the wide-event model. */
+/** Free-form metadata bag - the JSON tail of the wide-event model. */
 export const Metadata = z.record(z.string(), z.unknown());
 export type Metadata = z.infer<typeof Metadata>;

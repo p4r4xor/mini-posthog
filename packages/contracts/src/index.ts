@@ -1,5 +1,5 @@
 /**
- * @ata/contracts — the single source of truth for the types and schemas shared
+ * @ata/contracts - the single source of truth for the types and schemas shared
  * across the SDK, ingestion/query API, storage adapters, and the web app.
  *
  * Layers (docs/architecture.md §4):

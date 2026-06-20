@@ -122,7 +122,7 @@ function compileMetric(plan: QueryPlan): CompiledMetric {
     }
 
     default: {
-      // Exhaustiveness guard — unreachable for a validated plan.
+      // Exhaustiveness guard - unreachable for a validated plan.
       const _never: never = agg;
       throw new Error(`unsupported aggregation: ${String(_never)}`);
     }

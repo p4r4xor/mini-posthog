@@ -52,7 +52,7 @@ function columnByRole(
 /** Stringify a cell for axis/table display, normalising null/boolean.
  *  Accepts `undefined` too, since indexing a row by key may miss a column. */
 function display(value: CellValue | undefined): string {
-  if (value === null || value === undefined) return "—";
+  if (value === null || value === undefined) return "-";
   if (typeof value === "boolean") return value ? "true" : "false";
   return String(value);
 }

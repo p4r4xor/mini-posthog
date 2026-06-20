@@ -24,7 +24,7 @@ function timeRangePredicate(where: CompiledPredicate[]): CompiledPredicate | und
   return where.find((p) => p.kind === "timeRange");
 }
 
-describe("compilePlan — §9 catalog", () => {
+describe("compilePlan - §9 catalog", () => {
   it("1. Avg LLM latency by model over time (event, line)", () => {
     const plan: QueryPlan = {
       level: "event",
@@ -120,7 +120,7 @@ describe("compilePlan — §9 catalog", () => {
     expect(q.orderBy).toBeUndefined();
   });
 
-  it("4. Cost per successful run by model (run, bar) — level routes to runs", () => {
+  it("4. Cost per successful run by model (run, bar) - level routes to runs", () => {
     const plan: QueryPlan = {
       level: "run",
       metric: { agg: "avg", field: "costUsd" },
@@ -148,7 +148,7 @@ describe("compilePlan — §9 catalog", () => {
     expect(timeRangePredicate(q.where)).toBeDefined();
   });
 
-  it("5. Top 10 slowest traces (trace, table) — orderBy + limit", () => {
+  it("5. Top 10 slowest traces (trace, table) - orderBy + limit", () => {
     // traceId isn't a CATEGORICAL_DIMENSION; the `traces` rollup is already one
     // row per trace, so "top 10 slowest" is max(durationMs), no group-by, sorted
     // by the metric desc with limit 10.
@@ -176,7 +176,7 @@ describe("compilePlan — §9 catalog", () => {
     expect(timeRangePredicate(q.where)).toBeDefined();
   });
 
-  it("6. Error rate by tool name (event, bar) — ratio expansion", () => {
+  it("6. Error rate by tool name (event, bar) - ratio expansion", () => {
     const plan: QueryPlan = {
       level: "event",
       metric: {
@@ -206,7 +206,7 @@ describe("compilePlan — §9 catalog", () => {
     expect(timeRangePredicate(q.where)).toBeDefined();
   });
 
-  it("7. Number of runs per hour (event, line) — count_distinct(runId)", () => {
+  it("7. Number of runs per hour (event, line) - count_distinct(runId)", () => {
     const plan: QueryPlan = {
       level: "event",
       metric: { agg: "count_distinct", field: "runId" },
@@ -248,7 +248,7 @@ describe("compilePlan — §9 catalog", () => {
   });
 });
 
-describe("compilePlan — invariants & negative checks", () => {
+describe("compilePlan - invariants & negative checks", () => {
   it("count metric never emits a column", () => {
     const q = compilePlan({
       level: "event",

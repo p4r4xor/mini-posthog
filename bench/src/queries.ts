@@ -3,7 +3,7 @@
  *
  * The 8 published catalog questions PLUS "p95 LLM latency by model" (the §9
  * quantile example). Each NL string is run through the REAL hybrid planner
- * (`planQuery`) and compiled with the REAL compiler (`compilePlan`) — exactly
+ * (`planQuery`) and compiled with the REAL compiler (`compilePlan`) - exactly
  * the app path. If any catalog query fails to plan we throw loudly: a broken
  * catalog is a benchmark-invalidating bug, not something to silently skip.
  */
@@ -31,7 +31,7 @@ export interface BenchQuery {
   compiled: CompiledQuery;
   /** Which planner stage produced the plan (should be deterministic for all). */
   source: "deterministic" | "llm";
-  /** The query level — surfaced because run/trace levels hit the rollup views. */
+  /** The query level - surfaced because run/trace levels hit the rollup views. */
   level: CompiledQuery["source"];
 }
 
@@ -54,7 +54,7 @@ export async function buildQueries(window: {
     const result = await planQuery(nl, { now, timeRange });
     if (!result.ok) {
       throw new Error(
-        `Catalog query failed to plan: "${nl}" — ${result.reason}. ` +
+        `Catalog query failed to plan: "${nl}" - ${result.reason}. ` +
           `The benchmark requires every catalog query to compile.`,
       );
     }

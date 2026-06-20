@@ -1,5 +1,5 @@
 /**
- * @ata/api entrypoint — server bootstrap (docs/architecture.md §12).
+ * @ata/api entrypoint - server bootstrap (docs/architecture.md §12).
  *
  * Wires the async ingestion spine: HTTP /capture → EventQueue → IngestionWorker →
  * EventStore, with payloads externalized to a BlobStore. The worker runs in-process

@@ -22,7 +22,7 @@ import { renderAggregate } from "./sql-render.js";
  *
  * One wide `events` table is the source of truth; `runs`/`traces` are SQL views
  * deriving rollups (see schema.ts). The neutral `CompiledQuery` is rendered to
- * DuckDB SQL with bound parameters by sql-render.ts — the only dialect-specific
+ * DuckDB SQL with bound parameters by sql-render.ts - the only dialect-specific
  * code in the query path.
  */
 export class DuckDBEventStore implements EventStore {
@@ -48,7 +48,7 @@ export class DuckDBEventStore implements EventStore {
 
   private conn(): DuckDBConnection {
     if (!this.connection) {
-      throw new Error("DuckDBEventStore not initialised — call init() first");
+      throw new Error("DuckDBEventStore not initialised - call init() first");
     }
     return this.connection;
   }
@@ -117,13 +117,13 @@ export class DuckDBEventStore implements EventStore {
   }
 
   /**
-   * FAST, NON-idempotent bulk load — benchmark/loader use ONLY.
+   * FAST, NON-idempotent bulk load - benchmark/loader use ONLY.
    *
    * Unlike `insertBatch` (which keeps idempotency via the event_id PRIMARY KEY +
    * `ON CONFLICT DO NOTHING`, paying a per-row prepared INSERT and two COUNT
    * scans), this path uses the DuckDB Appender: a columnar, set-at-a-time writer
    * that streams rows straight into the table with no conflict handling and no
-   * round-trip per row. The CALLER GUARANTEES every `event_id` is unique — if a
+   * round-trip per row. The CALLER GUARANTEES every `event_id` is unique - if a
    * duplicate slips in, the PRIMARY KEY constraint throws on flush. It returns the
    * number of rows appended.
    *
@@ -183,7 +183,7 @@ export class DuckDBEventStore implements EventStore {
 
   async aggregate(query: CompiledQuery, projectId: string): Promise<AggregateResult> {
     const conn = this.conn();
-    // Tenant scoping is enforced here, always — prepend a projectId predicate so
+    // Tenant scoping is enforced here, always - prepend a projectId predicate so
     // no query path can accidentally read across projects.
     const scoped: CompiledQuery = {
       ...query,

@@ -8,11 +8,11 @@ import { externalizePayload } from "./payload.js";
 import type { EventQueue } from "./queue/event-queue.js";
 
 /**
- * Ingestion service (docs/architecture.md §12) — the EDGE of the async pipeline.
+ * Ingestion service (docs/architecture.md §12) - the EDGE of the async pipeline.
  *
  * It does NOT touch the database. Per request it:
  *   1. checks backpressure (queue depth) and sheds load with a signal the HTTP
- *      layer turns into 429 — the SDK already backs off on 429;
+ *      layer turns into 429 - the SDK already backs off on 429;
  *   2. validates each event (per-event partial success);
  *   3. externalizes each valid event's payload to the BlobStore, leaving a slim
  *      event (the 4 KB of text never enters the queue);
@@ -61,7 +61,7 @@ export class IngestionService {
         });
         continue;
       }
-      // Strip large payload to the BlobStore BEFORE enqueue — keeps the queue slim.
+      // Strip large payload to the BlobStore BEFORE enqueue - keeps the queue slim.
       slim.push(await externalizePayload(parsed.data, this.blob));
     }
 

@@ -1,14 +1,14 @@
 /**
- * ClickHouse schema (DDL) — one wide `events` table (ReplacingMergeTree) + derived
+ * ClickHouse schema (DDL) - one wide `events` table (ReplacingMergeTree) + derived
  * `runs`/`traces` VIEWs, implementing the "Production storage refinements
  * (ClickHouse adapter)" subsection of docs/architecture.md §6.
  *
  * Column-type decisions (§6 refinements):
- *  - `Enum8` for `event_type`  — a closed 7-value set, 1 byte, validated at insert.
+ *  - `Enum8` for `event_type`  - a closed 7-value set, 1 byte, validated at insert.
  *  - `LowCardinality(String)` for the open-but-bounded sets (`agent_name`, `model`,
- *    `tool_name`, `status`, `error_type`, `project_id`) — dictionary-encoded, so
+ *    `tool_name`, `status`, `error_type`, `project_id`) - dictionary-encoded, so
  *    `GROUP BY model` is near-free.
- *  - `Decimal(12,6)` for `cost_usd` — exact money; float sums of many tiny costs drift.
+ *  - `Decimal(12,6)` for `cost_usd` - exact money; float sums of many tiny costs drift.
  *  - `DateTime64(3,'UTC')` for `timestamp`; `Nullable` only on sparse measures.
  *
  * Engine / layout (§6 refinements):
@@ -21,8 +21,8 @@
  *    one day ≈ 1B rows is already a large, right-sized partition; retention/TTL is
  *    day-granular (drop the oldest day = O(1) partition drop); and recent-time
  *    queries prune to a handful of partitions. Monthly would make 30B-row
- *    partitions — unwieldy for merges/TTL. (365 partitions/yr is well under CH's
- *    keep-it-under-~1–2k guidance.) The day is now the partition, so `toDate` is
+ *    partitions - unwieldy for merges/TTL. (365 partitions/yr is well under CH's
+ *    keep-it-under-~1-2k guidance.) The day is now the partition, so `toDate` is
  *    dropped from the sort key; `event_id` last gives the RMT dedup key without
  *    polluting the filter prefix.
  *  - data-skipping bloom-filter indexes on `trace_id` / `run_id`: the
@@ -31,7 +31,7 @@
  *    key (§6 "Point lookups vs aggregation").
  *
  * Rollups (`runs`/`traces`) are plain ClickHouse VIEWs here. PRODUCTION would use
- * incremental AggregatingMergeTree materialized views fired on insert (§7) — but at
+ * incremental AggregatingMergeTree materialized views fired on insert (§7) - but at
  * prototype scale VIEWs keep the rollups always-correct at zero maintenance cost
  * and give an apples-to-apples benchmark parity with the DuckDB adapter (which also
  * uses views). The rollup rules mirror the DuckDB adapter exactly (schema.ts there).
@@ -69,7 +69,7 @@ ORDER BY (project_id, event_type, timestamp, event_id);
 }
 
 /**
- * `runs` view — one row per run, derived from its events. Rollup rules match the
+ * `runs` view - one row per run, derived from its events. Rollup rules match the
  * DuckDB adapter:
  *  - primary_model: last non-null model by step_index (argMaxIf guarded for nulls).
  *  - outcome: status of the run_completed event if 'success'/'failed', else 'running'.
@@ -115,7 +115,7 @@ GROUP BY run_id;
 }
 
 /**
- * `traces` view — one row per trace, aggregated over its runs. Rollup rules match
+ * `traces` view - one row per trace, aggregated over its runs. Rollup rules match
  * the DuckDB adapter:
  *  - outcome: outcome of the LATEST run by started_at (argMax over started_at).
  *  - run_count: uniqExact(run_id).
@@ -128,7 +128,7 @@ export function tracesViewDdl(db: string): string {
   // the \`runs\` view here: ClickHouse inlines views at definition time, so the
   // runs view's own aggregates (min/max/argMax over events) would nest inside
   // these aggregates AND the inner \`started_at\` alias would collide with the outer
-  // \`started_at\` alias — both raise ILLEGAL_AGGREGATION. Distinct inner alias
+  // \`started_at\` alias - both raise ILLEGAL_AGGREGATION. Distinct inner alias
   // names + a true subquery scope avoid that.
   return `
 CREATE VIEW IF NOT EXISTS ${db}.traces AS

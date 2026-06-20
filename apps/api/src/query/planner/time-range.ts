@@ -83,7 +83,7 @@ function parseDate(fragment: string, now: Date): number | null {
   if (ymd) return Date.UTC(Number(ymd[1]), Number(ymd[2]) - 1, Number(ymd[3]));
 
   // Day/month-first numeric: DD/MM/YYYY (default) or MM/DD/YYYY (when unambiguous).
-  // Separators - / . — "20/06/2026" → 2026-06-20; "06/20/2026" → 2026-06-20.
+  // Separators - / . - "20/06/2026" → 2026-06-20; "06/20/2026" → 2026-06-20.
   const dmy = s.match(/\b(\d{1,2})[./-](\d{1,2})[./-](\d{4})\b/);
   if (dmy) {
     let day = Number(dmy[1]);

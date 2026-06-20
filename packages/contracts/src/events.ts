@@ -3,12 +3,12 @@ import { Id, IsoTimestamp, Metadata } from "./common.js";
 
 /**
  * The wire DTO: what the SDK sends to `POST /capture`. This is the public
- * ingestion contract — versioned, validated at the edge, and stable.
+ * ingestion contract - versioned, validated at the edge, and stable.
  *
  * It is a discriminated union on `eventType`. Each variant carries exactly the
  * fields that make sense for it; the type system + Zod enforce that, e.g., an
  * `llm_call` cannot be missing token counts and a `run_completed` cannot carry an
- * independent `costUsd` (that would double-count — see docs/architecture.md §5).
+ * independent `costUsd` (that would double-count - see docs/architecture.md §5).
  *
  * `projectId` is intentionally NOT on the wire: it is resolved server-side from
  * the API key and stamped onto the storage row.

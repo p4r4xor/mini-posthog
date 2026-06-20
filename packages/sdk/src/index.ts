@@ -1,5 +1,5 @@
 /**
- * @ata/sdk — PostHog-like logging SDK for agent traces.
+ * @ata/sdk - PostHog-like logging SDK for agent traces.
  *
  * Hierarchical trace → run → event API with single-run sugar; events are
  * auto-stamped with the wire envelope, batched, and shipped to `POST /capture`

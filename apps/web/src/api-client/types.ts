@@ -25,7 +25,7 @@ export interface QueryRequest {
   limit?: number;
 }
 
-/** Successful `POST /query` response — a chart-ready result + its provenance. */
+/** Successful `POST /query` response - a chart-ready result + its provenance. */
 export interface QuerySuccess {
   ok: true;
   /** Whether the deterministic catalog or the LLM fallback planned the query. */
@@ -33,7 +33,7 @@ export interface QuerySuccess {
   result: QueryResult;
 }
 
-/** Rejected query — the NL did not map onto a supported plan. */
+/** Rejected query - the NL did not map onto a supported plan. */
 export interface QueryFailure {
   ok: false;
   reason: string;

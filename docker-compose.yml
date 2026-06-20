@@ -25,7 +25,7 @@ services:
       timeout: 3s
       retries: 10
 
-  # Redis Streams — the ingestion buffer (shock absorber) for the async pipeline.
+  # Redis Streams - the ingestion buffer (shock absorber) for the async pipeline.
   redis:
     image: redis:7.4-alpine
     container_name: ata-redis

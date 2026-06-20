@@ -2,7 +2,7 @@
 # Pre-commit gate: fast, self-contained checks that catch lint + type + logic
 # regressions regardless of editor state (the editor's TS server can go stale).
 # We run every test EXCEPT the ClickHouse adapter suite (which needs a running
-# server) — those are covered by CI with a ClickHouse service. Everything else
+# server) - those are covered by CI with a ClickHouse service. Everything else
 # (DuckDB embedded, ingestion, gRPC, planner, contracts, sdk, simulator) runs here.
 set -e
 echo "[pre-commit] biome lint…"

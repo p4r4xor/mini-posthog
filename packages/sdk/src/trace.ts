@@ -1,7 +1,7 @@
 /**
  * Trace handle implementation.
  *
- * A trace is the logical thread grouping related runs — run-level retries and
+ * A trace is the logical thread grouping related runs - run-level retries and
  * conversational turns (docs/architecture.md §3). It holds the shared
  * agentName/userId/tags context and mints `Run` handles. Trace outcome/totals
  * are *derived* server-side from the runs, so `end()` is bookkeeping only and
@@ -42,7 +42,7 @@ export class TraceImpl implements Trace {
   }
 
   /**
-   * No-op by design: a trace emits no server event — its state (outcome, totals,
+   * No-op by design: a trace emits no server event - its state (outcome, totals,
    * duration) is derived server-side from its runs. Present for lifecycle symmetry
    * with `run.end()` and to allow future client-side bookkeeping.
    */

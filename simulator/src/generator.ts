@@ -2,7 +2,7 @@
  * Pure, deterministic trace generator.
  *
  * `generateTrace(rng, ctx)` yields the ordered sequence of SDK calls that make
- * up ONE trace — `start_trace`, one-or-more runs each bracketed by
+ * up ONE trace - `start_trace`, one-or-more runs each bracketed by
  * `start_run`/`end_run`, with `llm_call`/`tool_call`/`step`/`error`/`retry`
  * captures in between. It performs NO I/O and never constructs an SDK client;
  * the driver (run-simulation.ts) replays these descriptors against a real
@@ -12,7 +12,7 @@
  * passed-in `rng` and the base time window in `ctx`. No `Math.random()` / no
  * `Date.now()`. Same seed + same ctx ⇒ identical stream.
  *
- * Time spread (docs/architecture.md §7 — time-series queries need real
+ * Time spread (docs/architecture.md §7 - time-series queries need real
  * distribution): each trace gets a start time spread across the window, and a
  * per-trace clock advances by each event's simulated latency, so `at` on every
  * capture reflects when it "happened".
@@ -124,7 +124,7 @@ class Clock {
  * Shape: pick an agent (weighted) and a user; spread the trace start across the
  * window. Run the agent loop (LLM + tool steps, with step-level retries +
  * errors). With some probability the whole run fails and the trace gets a
- * SECOND run — a run-level retry, i.e. a trace with more than one run.
+ * SECOND run - a run-level retry, i.e. a trace with more than one run.
  */
 export function* generateTrace(rng: Rng, ctx: TraceContext): Generator<SimCall> {
   const agent = weightedPick(
@@ -220,7 +220,7 @@ function* generateRun(
           // owns its outcome (status="failed"), exactly like a failed llm_call.
           // This is what makes "which tools fail the most" / "error rate by tool"
           // group cleanly by toolName. (error events are reserved for run-level
-          // aborts that aren't a specific tool failure — see below.)
+          // aborts that aren't a specific tool failure - see below.)
           yield* emitToolCall(rng, clock, tool, "failed");
           runHadError = true;
         } else {

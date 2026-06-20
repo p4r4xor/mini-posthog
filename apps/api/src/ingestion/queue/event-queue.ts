@@ -1,14 +1,14 @@
 import type { CaptureEvent } from "@ata/contracts";
 
 /**
- * EventQueue port — the buffer that decouples ingestion from the database
+ * EventQueue port - the buffer that decouples ingestion from the database
  * (docs/architecture.md §12). `/capture` only validates + enqueues and returns
  * fast; a worker drains the queue and does the heavy batched insert. This is the
  * shock-absorber that survives DB stalls and the 10× peak.
  *
  * Implementations: {@link MemoryEventQueue} (tests / single-process dev) and
  * {@link RedisStreamQueue} (real decoupled buffering). Production swaps in
- * Kafka/Redpanda behind this same interface — see the §12 durability note.
+ * Kafka/Redpanda behind this same interface - see the §12 durability note.
  *
  * Only ever carries SLIM events (payload already externalized to the BlobStore),
  * so the backlog is ~300 B/event, not ~4 KB.
@@ -34,7 +34,7 @@ export interface ConsumeOptions {
 export interface EventQueue {
   /** Append slim events for a project; returns the count enqueued. */
   enqueue(projectId: string, events: CaptureEvent[]): Promise<number>;
-  /** Current backlog depth — drives 429 backpressure at the edge. */
+  /** Current backlog depth - drives 429 backpressure at the edge. */
   depth(): Promise<number>;
   /**
    * Consume in batches until aborted. If `handler` resolves, the batch is acked;

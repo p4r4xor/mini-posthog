@@ -7,7 +7,7 @@ import type { EventRow } from "./storage.js";
  * `CaptureEvent` flattens into the wide `events` table. Ingestion uses this; no
  * other layer reaches across representations.
  *
- * Absent type-specific fields become null — the sparse-column model. `projectId`
+ * Absent type-specific fields become null - the sparse-column model. `projectId`
  * is supplied by ingestion (resolved from the API key), never by the client.
  */
 export function captureEventToRow(event: CaptureEvent, projectId: string): EventRow {

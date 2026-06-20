@@ -6,7 +6,7 @@
  *   - network error / 429 / 5xx → retryable: exponential backoff + jitter,
  *                                 capped at `maxRetries`.
  *   - other 4xx                 → permanent: do not retry (malformed batch,
- *                                 bad api key, etc.) — caller drops the batch.
+ *                                 bad api key, etc.) - caller drops the batch.
  *
  * `eventId` is client-generated so the server can dedup our at-least-once
  * deliveries; retrying a batch is therefore safe.
@@ -70,7 +70,7 @@ export async function sendBatch(
       if (res.ok) return;
 
       if (!isRetryableStatus(res.status)) {
-        // Permanent: malformed batch / auth error — retrying won't help.
+        // Permanent: malformed batch / auth error - retrying won't help.
         throw new PermanentTransportError(
           `capture rejected with HTTP ${res.status}`,
           res.status,

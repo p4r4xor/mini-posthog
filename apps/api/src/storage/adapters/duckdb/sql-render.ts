@@ -56,7 +56,7 @@ function renderPredicate(
     const col = resolveField(source, pred.column);
     const from = bag.add(pred.from);
     const to = bag.add(pred.to);
-    // half-open [from, to) — standard for time buckets.
+    // half-open [from, to) - standard for time buckets.
     return `${col} >= ${from} AND ${col} < ${to}`;
   }
 

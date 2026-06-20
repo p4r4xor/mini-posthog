@@ -1,13 +1,13 @@
 # Agent Trace Analytics
 
-A mini PostHog/Mixpanel for **AI agent traces** — log traces from an SDK, ingest them
+A mini PostHog/Mixpanel for **AI agent traces** - log traces from an SDK, ingest them
 through an async pipeline, store them in a **swappable analytical engine (DuckDB or
 ClickHouse)**, and explore them with **natural-language queries**, charts, and a trace
 explorer.
 
-- **Full design + rationale:** [`docs/architecture.md`](docs/architecture.md) — component
-  communication map (§15), design rationale (§16), pending/skipped (§17–§18), the earned
-  storage decision + 1M benchmark (§8).
+- **Full design + rationale:** [`docs/architecture.md`](docs/architecture.md): the storage
+  engine choice + benchmarks, the ingestion protocol, query translation, production scaling
+  notes, and what was intentionally skipped.
 - **Original assignment:** [`docs/TASK.md`](docs/TASK.md).
 
 ```
@@ -20,23 +20,23 @@ SDK ─HTTP/JSON or gRPC─▶ /capture ─▶ EventQueue (Redis Streams) ─▶
 
 | Path | What |
 | --- | --- |
-| `packages/contracts` | Shared Zod schemas + types: the wire `CaptureEvent`, `QueryPlan` IR, `QueryResult`, `EventStore` port — the contract everything depends on |
+| `packages/contracts` | Shared Zod schemas + types: the wire `CaptureEvent`, `QueryPlan` IR, `QueryResult`, `EventStore` port - the contract everything depends on |
 | `packages/sdk` | TS logging SDK: hierarchical trace→run→event, count/time batching, retry w/ backoff, bounded-queue backpressure, `flush`/`shutdown` |
 | `apps/api` | Ingestion (HTTP + gRPC → queue → worker → store), NL query, trace explorer |
 | `apps/web` | React + Recharts UI: NL query + charts + trace explorer |
-| `simulator` | Toy agent simulator — generates realistic traces **through the SDK** (demo + ~1M) |
+| `simulator` | Toy agent simulator - generates realistic traces **through the SDK** (demo + ~1M) |
 | `bench` | Storage benchmark (DuckDB vs ClickHouse) + transport benchmark (gRPC vs HTTP) |
 
 ## Prerequisites
 
 - **Node ≥ 20**, **pnpm 8+**
-- **Docker** — only for the ClickHouse + Redis path; the DuckDB quick-start needs nothing.
+- **Docker** - only for the ClickHouse + Redis path; the DuckDB quick-start needs nothing.
 
 ```bash
 pnpm install
 ```
 
-## Quick start (DuckDB — zero external dependencies)
+## Quick start (DuckDB - zero external dependencies)
 
 Embedded DuckDB + in-memory queue, no Docker. Fastest way to see it end-to-end.
 
@@ -62,7 +62,7 @@ ATA_ENGINE=clickhouse ATA_QUEUE=redis pnpm --filter @ata/api start
 pnpm --filter @ata/simulator exec tsx src/index.ts --mode demo --events 20000
 ```
 
-The web UI, queries, and explorer are identical — the **engine and queue are swapped by
+The web UI, queries, and explorer are identical - the **engine and queue are swapped by
 env vars only**. With Redis, ingestion is fully async (capture returns `202`; a worker
 drains the stream into ClickHouse), and prompt/response payloads are externalized to the
 blob store (only a small reference flows through the queue).
@@ -81,21 +81,21 @@ over a historical window, multiple agents/models/tools, successes + failures + r
 ## Benchmarks
 
 ```bash
-# storage: DuckDB vs ClickHouse (streaming load, memory-safe) — needs ClickHouse up
+# storage: DuckDB vs ClickHouse (streaming load, memory-safe) - needs ClickHouse up
 pnpm --filter @ata/bench exec tsx src/index.ts --events 200000 --engines duckdb,clickhouse
 
-# transport: gRPC vs HTTP — wire size, serialization CPU, loopback throughput
+# transport: gRPC vs HTTP - wire size, serialization CPU, loopback throughput
 pnpm --filter @ata/bench exec tsx src/transport-bench.ts --events 100000
 ```
 
-Latest results + interpretation live in `docs/architecture.md` §8.
+Latest results + interpretation live in `docs/architecture.md` under Performance results.
 
 ## Tests & quality gate
 
 ```bash
 pnpm lint        # Biome (lint + format)
 pnpm typecheck   # tsc across all packages
-pnpm test        # vitest — the ClickHouse suite needs `docker compose up -d clickhouse`
+pnpm test        # vitest - the ClickHouse suite needs `docker compose up -d clickhouse`
 pnpm check       # lint + typecheck + test
 ```
 
@@ -117,7 +117,7 @@ service.
 | `ATA_MAX_QUEUE_DEPTH` | `100000` | edge backpressure threshold (→ 429) |
 | `ATA_WORKER_BATCH` / `_MS` | `5000` / `1000` | worker insert batch size / max wait |
 | `ATA_CH_URL/USER/PASSWORD/DATABASE` | `http://localhost:8123` / `ata` / `ata` / `ata` | ClickHouse connection |
-| `ANTHROPIC_API_KEY` | — | optional; enables the LLM fallback planner |
+| `ANTHROPIC_API_KEY` | - | optional; enables the LLM fallback planner |
 
 Local project/API-key are hardcoded for dev: API key **`dev_project_key`** → project
 **`proj_dev`**.
@@ -126,7 +126,7 @@ Local project/API-key are hardcoded for dev: API key **`dev_project_key`** → p
 
 Deterministic-first (no API key needed): exact catalog templates → a slot composer →
 time-range parsing; an optional Claude fallback (`ANTHROPIC_API_KEY`) covers the long tail.
-Full grammar in `docs/architecture.md` §9–§10. Representative examples:
+Full grammar in `docs/architecture.md` under Query translation approach. Representative examples:
 
 - **Catalog:** *"Average LLM latency by model over time"*, *"Which tools fail the most?"*,
   *"Token usage by agent type"*, *"Cost per successful run by model"*, *"Top 10 slowest
@@ -147,4 +147,4 @@ run as raw SQL).
 Per the brief: production auth, billing, cloud deploy, complex permissions, full
 multi-tenant account management, pixel-perfect UI. Documented production-but-not-built
 items (gRPC→full OTLP, AggregatingMergeTree rollup MVs, Kafka/Redpanda, S3 blob store,
-cold-Parquet tiering) are in `docs/architecture.md` §17.
+cold-Parquet tiering) are in `docs/architecture.md` under Notes on what was intentionally skipped.

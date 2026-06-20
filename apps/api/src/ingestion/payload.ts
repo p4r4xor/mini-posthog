@@ -4,11 +4,11 @@ import type { BlobStore } from "../blob/blob-store.js";
 /**
  * Payload externalization (docs/architecture.md §6/§12).
  *
- * THE KEY IDEA — "4 KB never enters the queue":
+ * THE KEY IDEA - "4 KB never enters the queue":
  * An event's `metadata` mixes two very different kinds of data:
- *   - small *properties* we filter/group on or want inline (tags, route, attempt) —
+ *   - small *properties* we filter/group on or want inline (tags, route, attempt) -
  *     tens of bytes;
- *   - large *payload* text (the prompt `input`, the response `output`) — the bulk
+ *   - large *payload* text (the prompt `input`, the response `output`) - the bulk
  *     of the ~4 KB, and NEVER aggregated, only shown in the explorer.
  *
  * Before an event is enqueued, we strip the payload fields, write them to the
@@ -21,7 +21,7 @@ import type { BlobStore } from "../blob/blob-store.js";
 
 /**
  * The large payload lives in TOP-LEVEL event fields: `input` (on run_started) and
- * `output` (on run_completed) — the prompt and final response text. (They were
+ * `output` (on run_completed) - the prompt and final response text. (They were
  * previously dropped entirely on ingestion since they aren't analytical columns;
  * externalizing them both shrinks the queue AND finally persists them.)
  */
@@ -51,7 +51,7 @@ export async function externalizePayload(
     ...e,
     metadata: { ...(event.metadata ?? {}), payloadRef: ref },
   };
-  if ("input" in slim) slim.input = ""; // required string on run_started — keep valid
+  if ("input" in slim) slim.input = ""; // required string on run_started - keep valid
   if ("output" in slim) delete slim.output; // optional on run_completed
   return slim as CaptureEvent;
 }

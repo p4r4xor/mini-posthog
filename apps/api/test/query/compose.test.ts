@@ -11,7 +11,7 @@ async function plan(nl: string) {
   return r.plan;
 }
 
-describe("composePlan — broad slot-based coverage (beyond the catalog)", () => {
+describe("composePlan - broad slot-based coverage (beyond the catalog)", () => {
   it("total cost by user → event sum(costUsd) by userId", async () => {
     const p = await plan("total cost by user");
     expect(p.level).toBe("event");

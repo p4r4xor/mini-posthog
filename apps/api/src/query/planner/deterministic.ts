@@ -6,7 +6,7 @@ import type { PlanContext } from "./types.js";
  * Deterministic template planner (docs/architecture.md §10, step 1).
  *
  * Runs FIRST: free, offline, fast. Normalized keyword/regex matching maps the
- * §9 catalog questions — plus reasonable phrasings — onto fully-formed
+ * §9 catalog questions - plus reasonable phrasings - onto fully-formed
  * QueryPlans. Returns `null` when no template matches so the hybrid layer can
  * fall through to the LLM.
  *
@@ -295,7 +295,7 @@ const TEMPLATES: Template[] = [
 /**
  * Try every exact template in order; return the first match. If none match, fall
  * back to the general slot-based composer (covers the broad metric×dimension×
- * filter×grain space). Returns null only when neither produces a plan — then the
+ * filter×grain space). Returns null only when neither produces a plan - then the
  * hybrid layer tries the LLM.
  */
 export function matchDeterministic(nl: string, ctx: PlanContext): QueryPlan | null {

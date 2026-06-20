@@ -2,7 +2,7 @@
  * Map a decoded protobuf `Event` (flat) to a wire `CaptureEvent`-shaped object.
  *
  * We only copy the fields valid for the event's type so the downstream
- * `CaptureEvent.safeParse` (strict union) accepts it — i.e. gRPC reuses the exact
+ * `CaptureEvent.safeParse` (strict union) accepts it - i.e. gRPC reuses the exact
  * same validation as HTTP. The result is `unknown` on purpose: IngestionService
  * validates it, this mapper never asserts correctness.
  */

@@ -7,7 +7,7 @@ import type { IngestionService } from "../ingestion/ingestion-service.js";
 import { hydratePayload } from "../ingestion/payload.js";
 import type { QueryService } from "../query/query-service.js";
 
-/** Dependencies injected into the app — tests pass a :memory: store. */
+/** Dependencies injected into the app - tests pass a :memory: store. */
 export interface AppDeps {
   store: EventStore;
   ingestion: IngestionService;
@@ -70,7 +70,7 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
 
     const result = await deps.ingestion.capture(events, projectId);
     if (result.status === "backpressure") {
-      // Shed load — the SDK backs off on 429. The queue is the shock absorber;
+      // Shed load - the SDK backs off on 429. The queue is the shock absorber;
       // this is the edge telling producers to slow down before it overflows.
       return reply
         .code(429)

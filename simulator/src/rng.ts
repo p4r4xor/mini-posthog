@@ -1,7 +1,7 @@
 /**
  * Seeded, deterministic PRNG for reproducible trace generation.
  *
- * We deliberately do NOT touch `Math.random()` anywhere in generation logic — a
+ * We deliberately do NOT touch `Math.random()` anywhere in generation logic - a
  * given seed must always produce the exact same event stream, so the simulator
  * is unit-testable and benchmark runs are reproducible. `mulberry32` is a tiny,
  * fast, well-distributed 32-bit generator; good enough for synthetic data.

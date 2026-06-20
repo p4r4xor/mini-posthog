@@ -1,5 +1,5 @@
 /**
- * Toy agent simulator CLI — generates realistic agent traces through @ata/sdk.
+ * Toy agent simulator CLI - generates realistic agent traces through @ata/sdk.
  *
  * Run via tsx:
  *   tsx src/index.ts --mode demo --events 2000 --host http://localhost:3000

@@ -4,9 +4,9 @@
  * Generates a realistic ~N-event dataset via the real simulator + SDK, loads it
  * into each storage adapter, runs the supported-query catalog × K iterations,
  * and reports p50/p95 latency, ingest throughput, on-disk size, and compression
- * ratio — the numbers that fill the §8 storage-engine decision table.
+ * ratio - the numbers that fill the §8 storage-engine decision table.
  *
- * Memory safety: the dataset is STREAMED into each engine — generation produces
+ * Memory safety: the dataset is STREAMED into each engine - generation produces
  * fixed-size batches that are bulk-inserted and then freed, so peak heap is one
  * batch (tens of MB), regardless of `--events`. The dataset is regenerated per
  * engine; generation is deterministic (same seed → byte-identical data), so the
@@ -16,7 +16,7 @@
  *   tsx src/index.ts [--events N] [--iterations K] [--engines a,b] [--days D] [--seed S]
  *
  * Defaults: --events 200000 --iterations 25 --engines duckdb,clickhouse --days 7 --seed 1
- * (1M must be explicit: --events 1000000 — so an accidental run stays cheap.)
+ * (1M must be explicit: --events 1000000 - so an accidental run stays cheap.)
  */
 import type { StorageEngine } from "@ata/contracts";
 import { streamGenerate } from "./dataset.js";
@@ -72,7 +72,7 @@ function parseArgs(argv: string[]): Args {
     engines = enginesRaw.split(",").map((s) => s.trim()) as StorageEngine[];
     for (const e of engines) {
       if (e !== "duckdb" && e !== "clickhouse") {
-        throw new Error(`Unknown engine "${e}" — choose from: ${ALL_ENGINES.join(", ")}`);
+        throw new Error(`Unknown engine "${e}" - choose from: ${ALL_ENGINES.join(", ")}`);
       }
     }
   }
@@ -106,7 +106,7 @@ async function main(): Promise<void> {
     toMs: nowMs,
   };
 
-  // Compile the catalog ONCE against the (fixed) window — fail loudly if broken.
+  // Compile the catalog ONCE against the (fixed) window - fail loudly if broken.
   console.log("[bench] planning + compiling the query catalog …");
   const queries = await buildQueries(window);
   console.log(

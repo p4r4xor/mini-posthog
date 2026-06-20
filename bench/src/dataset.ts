@@ -2,12 +2,12 @@
  * Streaming dataset generation for the benchmark (docs/architecture.md §8).
  *
  * We reuse the REAL simulator generator through the REAL SDK so the benchmark
- * exercises the same code path that ships — but we swap the SDK's HTTP transport
+ * exercises the same code path that ships - but we swap the SDK's HTTP transport
  * for a COLLECTING transport: a `globalThis.fetch` stub that parses the POST
  * `{events}` body and pushes the CaptureEvents into an in-memory array (no
  * network, no API server).
  *
- * CRITICAL — bounded memory: the previous design materialised ALL CaptureEvents
+ * CRITICAL - bounded memory: the previous design materialised ALL CaptureEvents
  * AND all mapped EventRows at once (multiple GB → laptop crash). This version
  * STREAMS: it drains the collecting buffer incrementally, maps to EventRow, and
  * hands the caller fixed-size batches via `onBatch`, clearing buffers as it goes.
@@ -134,7 +134,7 @@ export async function streamGenerate(
         sampledRows++;
       }
     }
-    // Free the collected CaptureEvents — they have been mapped into `pending`.
+    // Free the collected CaptureEvents - they have been mapped into `pending`.
     collected.length = 0;
 
     while (pending.length >= batchSize) {

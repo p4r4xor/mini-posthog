@@ -2,7 +2,7 @@ import type { SourceTable } from "@ata/contracts";
 
 /**
  * Logical→physical column mapping for the ClickHouse adapter (docs/architecture.md
- * §6). Identical logical vocabulary to the DuckDB adapter — the compiler hands us
+ * §6). Identical logical vocabulary to the DuckDB adapter - the compiler hands us
  * the same camelCase logical names; each adapter owns its own physical mapping +
  * dialect. Physical columns are snake_case and match schema.ts.
  *
@@ -92,7 +92,7 @@ const EXPRESSIONS_BY_SOURCE: Record<SourceTable, Record<string, string>> = {
 
 /**
  * Resolve a logical field name to a physical SQL fragment (column or expression)
- * for the given source. Throws on unknown fields — the compiler only emits
+ * for the given source. Throws on unknown fields - the compiler only emits
  * whitelisted names, so an unknown name is a programming error, not user input.
  */
 export function resolveField(source: SourceTable, logical: string): string {

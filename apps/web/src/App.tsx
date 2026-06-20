@@ -1,6 +1,6 @@
 /**
  * App shell: a top-level tab nav switching between the Query and Explorer views.
- * State is intentionally tiny (which tab is active) — each feature owns its own
+ * State is intentionally tiny (which tab is active) - each feature owns its own
  * data fetching and local state.
  */
 import type { JSX } from "react";

@@ -1,7 +1,7 @@
 /**
  * Public configuration + handle types for @ata/sdk.
  *
- * The shapes here are deliberately the *ergonomic* surface the caller uses —
+ * The shapes here are deliberately the *ergonomic* surface the caller uses -
  * the SDK auto-stamps the rest of the wire envelope (eventId/traceId/runId/
  * stepIndex/timestamp/agentName/userId/metadata) before enqueueing, so callers
  * never hand-assemble a `CaptureEvent`.

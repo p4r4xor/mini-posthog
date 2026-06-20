@@ -3,7 +3,7 @@
  *
  * These are the knobs that make generated traces "realistic": each model has a
  * distinct latency/token/cost profile, each tool a distinct latency + failure
- * rate, agents prefer different models/tools. Everything is data — the generator
+ * rate, agents prefer different models/tools. Everything is data - the generator
  * (generator.ts) draws from these via the seeded RNG so the output varies by
  * index but is reproducible.
  */

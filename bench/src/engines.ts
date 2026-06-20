@@ -26,7 +26,7 @@ import type { BatchSink, GenSummary } from "./dataset.js";
 type BulkStore = EventStore & { bulkInsert(rows: EventRow[]): Promise<number> };
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-/** bench/results/ — output dir for the DuckDB file + results.json. */
+/** bench/results/ - output dir for the DuckDB file + results.json. */
 export const RESULTS_DIR = resolve(__dirname, "..", "results");
 const DUCKDB_PATH = resolve(RESULTS_DIR, "bench.duckdb");
 const CH_DATABASE = "ata_bench";
@@ -39,7 +39,7 @@ export interface LoadResult {
   store: EventStore;
   /** Rows inserted via the fast bulk path. */
   inserted: number;
-  /** Total load wall-clock (ms) — spans generation + bulkInsert (streamed). */
+  /** Total load wall-clock (ms) - spans generation + bulkInsert (streamed). */
   loadMs: number;
   /** Ingest throughput: rows / (loadMs/1000). */
   eventsPerSec: number;
@@ -94,7 +94,7 @@ export async function setupEngine(engine: StorageEngine): Promise<BulkStore> {
 /**
  * Force on-disk persistence and measure size for the given engine. Call AFTER
  * the query benchmark, once the load store has been closed (DuckDB is a single
- * read-write process — the loading connection must be released before we open a
+ * read-write process - the loading connection must be released before we open a
  * fresh one to CHECKPOINT and stat the file).
  */
 export async function measureDiskBytes(engine: StorageEngine): Promise<number> {
@@ -141,7 +141,7 @@ async function runDuckCheckpoint(path: string): Promise<void> {
 /**
  * STREAM the dataset into `engine` via the fast `bulkInsert` path. The `generate`
  * function (a partially-applied `streamGenerate`) drives batch production and
- * hands us one batch at a time through the sink — we persist each batch and then
+ * hands us one batch at a time through the sink - we persist each batch and then
  * let it be garbage-collected, so peak memory is one batch, NOT the whole dataset.
  *
  * The whole load (generation + inserts, which interleave) is timed for ingest

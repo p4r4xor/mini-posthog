@@ -1,7 +1,7 @@
 syntax = "proto3";
 
 // Own-protobuf ingestion contract (docs/architecture.md §12). This is the binary,
-// schema-enforced wire for high-throughput server SDKs — an alternative transport
+// schema-enforced wire for high-throughput server SDKs - an alternative transport
 // in front of the SAME IngestionService as HTTP /capture. Not full OTLP (no OTel
 // span remodel); it mirrors our CaptureEvent.
 package ata.capture.v1;
@@ -56,9 +56,9 @@ message CaptureResponse {
 }
 
 service IngestService {
-  // Unary batch — the simple path.
+  // Unary batch - the simple path.
   rpc Capture(CaptureRequest) returns (CaptureResponse);
-  // Client-streaming — the SDK streams events over one HTTP/2 call; the server
+  // Client-streaming - the SDK streams events over one HTTP/2 call; the server
   // applies HTTP/2 flow control as transport-level backpressure.
   rpc CaptureStream(stream Event) returns (CaptureResponse);
 }

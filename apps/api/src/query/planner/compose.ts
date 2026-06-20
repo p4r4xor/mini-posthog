@@ -5,11 +5,11 @@ import type { PlanContext } from "./types.js";
  * General slot-based planner (docs/architecture.md §10).
  *
  * Runs AFTER the exact catalog templates and BEFORE the LLM fallback. Instead of
- * matching whole sentences, it extracts SLOTS from the question —
+ * matching whole sentences, it extracts SLOTS from the question -
  *
  *   <agg> <measure> by <dimension> [over <grain>] [failed/successful] [top <N>]
  *
- * — and assembles a valid QueryPlan. One composer covers hundreds of phrasings
+ * - and assembles a valid QueryPlan. One composer covers hundreds of phrasings
  * deterministically (no API key): "total cost by user", "p99 tool latency by
  * tool", "number of llm calls by model", "average run duration by agent",
  * "which models cost the most", etc. The time window is resolved separately by
@@ -114,7 +114,7 @@ function eventTypeFilter(
 ): Filter | null {
   const v = (value: string): Filter => ({ field: "eventType", op: "eq", value });
   // The group-by dimension implies the event type that carries it: `model` is set
-  // only on llm_call, `toolName` only on tool/error/retry — scoping avoids a null
+  // only on llm_call, `toolName` only on tool/error/retry - scoping avoids a null
   // bucket (e.g. "cost by model" summing non-LLM events into a null group).
   if (dim === "model") return v("llm_call");
   if (dim === "toolName") return v("tool_call");

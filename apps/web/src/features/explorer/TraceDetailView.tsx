@@ -13,11 +13,11 @@ function fmtTime(iso: string): string {
 }
 
 function fmtMs(ms: number | null): string {
-  return ms === null || ms === undefined ? "—" : `${ms} ms`;
+  return ms === null || ms === undefined ? "-" : `${ms} ms`;
 }
 
 function fmtUsd(usd: number | null | undefined): string {
-  return usd === null || usd === undefined ? "—" : `$${usd.toFixed(4)}`;
+  return usd === null || usd === undefined ? "-" : `$${usd.toFixed(4)}`;
 }
 
 export function TraceDetailView({ trace }: { trace: TraceDetail }): JSX.Element {
@@ -59,7 +59,7 @@ export function TraceDetailView({ trace }: { trace: TraceDetail }): JSX.Element 
                 <td>
                   <span className={`pill status-${run.outcome}`}>{run.outcome}</span>
                 </td>
-                <td>{run.primaryModel ?? "—"}</td>
+                <td>{run.primaryModel ?? "-"}</td>
                 <td>{run.stepCount}</td>
                 <td>{fmtMs(run.durationMs)}</td>
                 <td>{fmtMs(run.computeMs)}</td>

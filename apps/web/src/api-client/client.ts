@@ -1,8 +1,8 @@
 /**
  * The typed HTTP client. Three functions cover the whole UI surface:
  * `runQuery` (NL → QueryResult), `listTraces`, and `getTrace`. All calls are
- * same-origin — Vite proxies /query and /traces to the API on :3000 (see
- * vite.config.ts) — so we use relative paths and let the proxy/host resolve.
+ * same-origin - Vite proxies /query and /traces to the API on :3000 (see
+ * vite.config.ts) - so we use relative paths and let the proxy/host resolve.
  */
 import type {
   ListTracesParams,

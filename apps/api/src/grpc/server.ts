@@ -7,7 +7,7 @@ import type { IngestionService } from "../ingestion/ingestion-service.js";
 import { protoEventToWire } from "./proto-map.js";
 
 /**
- * gRPC ingestion transport (docs/architecture.md §12) — a binary, HTTP/2,
+ * gRPC ingestion transport (docs/architecture.md §12) - a binary, HTTP/2,
  * schema-enforced front door for high-throughput server SDKs. It is ONLY a
  * transport: both RPCs map protobuf → wire events and call the SAME
  * `IngestionService.capture(...)`, so the spine (validate → externalize → enqueue
@@ -61,7 +61,7 @@ export function startGrpcServer(
   port: number,
 ): Promise<GrpcServerHandle> {
   const pkgDef = protoLoader.loadSync(PROTO_PATH, {
-    keepCase: true, // decoded objects use proto field names (event_id, …) — matches proto-map
+    keepCase: true, // decoded objects use proto field names (event_id, …) - matches proto-map
     longs: Number,
     enums: String,
     defaults: true,

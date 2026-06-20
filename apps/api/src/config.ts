@@ -58,6 +58,6 @@ export const BLOB_DIR = process.env.ATA_BLOB_DIR ?? `${process.cwd()}/data/blobs
 /** Edge backpressure: return 429 once the queue backlog reaches this depth. */
 export const MAX_QUEUE_DEPTH = Number(process.env.ATA_MAX_QUEUE_DEPTH ?? 100_000);
 
-/** Worker batch sizing — large batches keep ClickHouse inserts efficient. */
+/** Worker batch sizing - large batches keep ClickHouse inserts efficient. */
 export const WORKER_BATCH_SIZE = Number(process.env.ATA_WORKER_BATCH ?? 5_000);
 export const WORKER_BATCH_MS = Number(process.env.ATA_WORKER_BATCH_MS ?? 1_000);

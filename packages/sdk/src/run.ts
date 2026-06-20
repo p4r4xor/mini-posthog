@@ -130,7 +130,7 @@ export class RunImpl implements Run {
   }
 
   /**
-   * Terminal event for the run. Carries only outcome + optional output —
+   * Terminal event for the run. Carries only outcome + optional output -
    * deliberately no cost/latency/token fields, since rollup totals are derived
    * from constituent events (docs/architecture.md §5).
    */

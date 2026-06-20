@@ -13,7 +13,7 @@ import type { CellValue, ResultColumn } from "./query-result.js";
 // ---------------------------------------------------------------------------
 
 /**
- * The flat, wide storage row — one per event. Typed hot columns for what we
+ * The flat, wide storage row - one per event. Typed hot columns for what we
  * filter/group on, plus the `metadata` JSON tail. Sparse columns (e.g. `model`
  * only on LLM events) are null and compress to ~nothing in a columnar store.
  */
@@ -75,7 +75,7 @@ export interface TraceSummary {
   costUsd: number;
 }
 
-/** A trace with its runs and full event timeline — the explorer detail view. */
+/** A trace with its runs and full event timeline - the explorer detail view. */
 export interface TraceDetail extends TraceSummary {
   runs: RunSummary[];
   events: EventRow[];
@@ -96,7 +96,7 @@ export interface TraceFilter {
 }
 
 // ---------------------------------------------------------------------------
-// Compiled query — the neutral IR the compiler hands to an adapter
+// Compiled query - the neutral IR the compiler hands to an adapter
 // ---------------------------------------------------------------------------
 
 /** Which logical source a compiled query reads (resolved from QueryLevel). */
@@ -105,7 +105,7 @@ export type SourceTable = "events" | "runs" | "traces";
 /**
  * NOTE on `column` fields throughout `CompiledQuery`: these are LOGICAL field
  * identifiers from the contract vocabulary (e.g. "latencyMs", "model",
- * "timestamp", "durationMs") — NOT physical SQL column names. Each EventStore
+ * "timestamp", "durationMs") - NOT physical SQL column names. Each EventStore
  * adapter owns the logical→physical mapping (snake_case columns, etc.) and the
  * dialect rendering. This keeps the compiler fully engine-agnostic.
  *
@@ -141,7 +141,7 @@ export type CompiledGroupKey =
 
 /**
  * The neutral, validated query the compiler produces. Each adapter renders this
- * to its own dialect (date bucketing, parameter placeholders) — the only
+ * to its own dialect (date bucketing, parameter placeholders) - the only
  * engine-specific code in the query path.
  */
 export interface CompiledQuery {
@@ -178,7 +178,7 @@ export interface AggregateResult {
 
 /**
  * The storage port. Adapters own how `runs`/`traces` rollups are derived
- * (DuckDB: views/rollup tables; ClickHouse: AggregatingMergeTree MVs) — the rest
+ * (DuckDB: views/rollup tables; ClickHouse: AggregatingMergeTree MVs) - the rest
  * of the system never sees that.
  */
 export interface EventStore {

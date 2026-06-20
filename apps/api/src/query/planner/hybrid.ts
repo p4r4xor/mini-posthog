@@ -14,7 +14,7 @@ import {
  *
  * Pipeline: deterministic templates → constrained LLM fallback → reject.
  *
- * SAFETY BOUNDARY: every candidate plan — whether from a template or the LLM —
+ * SAFETY BOUNDARY: every candidate plan - whether from a template or the LLM -
  * is run through `QueryPlan.safeParse` before it is returned. The LLM only fills
  * slots; nothing unvalidated ever reaches the compiler/engine. All LLM/network
  * errors are caught and converted to a clean rejection, never re-thrown.
@@ -29,7 +29,7 @@ function reject(reason: string): PlanResult {
 /**
  * Resolve the time window, in precedence order:
  *   1. a time expression parsed from the question itself ("on 18th June",
- *      "last 24 hours") — the user was explicit, so it wins;
+ *      "last 24 hours") - the user was explicit, so it wins;
  *   2. an explicit `opts.timeRange` (e.g. a UI time picker);
  *   3. the default `now − lookback → now`.
  */
@@ -45,7 +45,7 @@ function resolveTimeRange(nl: string, opts: PlanOptions, now: Date): TimeRange {
 /**
  * Translate a natural-language question into a validated QueryPlan.
  *
- * Never throws on bad NL or model output — returns `{ ok: false, ... }` with the
+ * Never throws on bad NL or model output - returns `{ ok: false, ... }` with the
  * supported catalog instead.
  */
 export async function planQuery(nl: string, opts: PlanOptions = {}): Promise<PlanResult> {
@@ -60,7 +60,7 @@ export async function planQuery(nl: string, opts: PlanOptions = {}): Promise<Pla
     if (parsed.success) {
       return { ok: true, plan: parsed.data, source: "deterministic" };
     }
-    // A template produced an invalid plan — a bug, but never throw at callers.
+    // A template produced an invalid plan - a bug, but never throw at callers.
     return reject("Internal: the matched template produced an invalid plan.");
   }
 
@@ -82,7 +82,7 @@ export async function planQuery(nl: string, opts: PlanOptions = {}): Promise<Pla
   // Inject the resolved time window if the model omitted it (per the prompt).
   const candidate = injectTimeRange(raw, timeRange);
 
-  // 3) Validate — the safety boundary. Off-grammar output is rejected.
+  // 3) Validate - the safety boundary. Off-grammar output is rejected.
   const parsed = QueryPlan.safeParse(candidate);
   if (parsed.success) {
     return { ok: true, plan: parsed.data, source: "llm" };

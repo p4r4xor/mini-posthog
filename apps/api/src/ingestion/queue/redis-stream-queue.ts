@@ -3,13 +3,13 @@ import { Redis } from "ioredis";
 import type { ConsumeOptions, EventQueue, QueuedMessage } from "./event-queue.js";
 
 /**
- * Redis Streams EventQueue — real decoupled buffering for local/prototype
+ * Redis Streams EventQueue - real decoupled buffering for local/prototype
  * (docs/architecture.md §12). Producers `XADD` slim events; a consumer GROUP
  * drains them with at-least-once delivery (`XREADGROUP` → process → `XACK`).
  *
  * Resilience:
  *  - `MAXLEN ~ cap` bounds memory (approximate trim). NOTE: trimming is lossy
- *    under sustained overload — the documented Redis-vs-Kafka tradeoff (Kafka
+ *    under sustained overload - the documented Redis-vs-Kafka tradeoff (Kafka
  *    drops by age on disk, not by force). We pair it with edge 429s so we shed
  *    load before trimming bites.
  *  - crashed consumers are recovered via `XAUTOCLAIM` (reclaim idle pending).

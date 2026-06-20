@@ -20,7 +20,7 @@ function fmtTime(iso: string): string {
 }
 
 function fmtMs(ms: number | null): string {
-  return ms === null || ms === undefined ? "—" : `${ms} ms`;
+  return ms === null || ms === undefined ? "-" : `${ms} ms`;
 }
 
 export function ExplorerView(): JSX.Element {

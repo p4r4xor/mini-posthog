@@ -1,6 +1,6 @@
 /**
  * Transport micro-benchmark: gRPC (binary protobuf) vs HTTP (JSON) for event
- * ingestion. Isolates the TRANSPORT cost — no DB, no queue — so the numbers show
+ * ingestion. Isolates the TRANSPORT cost - no DB, no queue - so the numbers show
  * what choosing gRPC actually buys: smaller wire, cheaper (de)serialization, higher
  * loopback throughput. Both servers do the same minimal work (decode + count).
  *
@@ -228,7 +228,7 @@ async function grpcThroughput(
 }
 
 async function main(): Promise<void> {
-  console.log(`\nTRANSPORT BENCHMARK — ${fmt(TOTAL)} events, batch ${BATCH}, loopback\n`);
+  console.log(`\nTRANSPORT BENCHMARK - ${fmt(TOTAL)} events, batch ${BATCH}, loopback\n`);
 
   console.log("A) wire size per event");
   wireSize("analytical", httpAnalytical(1), protoAnalytical(1));

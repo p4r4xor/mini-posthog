@@ -80,7 +80,7 @@ const FILTER_OP_SQL = {
 function bucketExpr(grain: TimeGrain, col: string): string {
   switch (grain) {
     case "second":
-      return `toStartOfSecond(${col})`; // needs DateTime64 — our timestamp is
+      return `toStartOfSecond(${col})`; // needs DateTime64 - our timestamp is
     case "minute":
       return `toStartOfMinute(${col})`;
     case "hour":
@@ -103,7 +103,7 @@ function renderPredicate(
   if (pred.kind === "timeRange") {
     const col = resolveField(source, pred.column);
     // half-open [from, to). Bind as CH DateTime64 literals ("YYYY-MM-DD
-    // HH:MM:SS.mmm", UTC) — ClickHouse won't coerce an ISO-8601 "...Z" string to
+    // HH:MM:SS.mmm", UTC) - ClickHouse won't coerce an ISO-8601 "...Z" string to
     // DateTime64 directly, so we normalise here (param values are still bound, not
     // interpolated → injection-safe).
     const from = bag.add(toChDateTime(pred.from));

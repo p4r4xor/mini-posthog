@@ -1,5 +1,5 @@
 /**
- * DuckDB schema (DDL) — one wide `events` table + derived `runs`/`traces` VIEWS
+ * DuckDB schema (DDL) - one wide `events` table + derived `runs`/`traces` VIEWS
  * (docs/architecture.md §6). At demo size, views give always-correct rollups at
  * zero maintenance cost; production would materialise them as rollup tables and,
  * for ClickHouse, AggregatingMergeTree MVs fired on insert (§7).
@@ -32,7 +32,7 @@ CREATE TABLE IF NOT EXISTS events (
 `;
 
 /**
- * `runs` view — one row per run, derived from its events.
+ * `runs` view - one row per run, derived from its events.
  *
  * Design decisions:
  *  - primary_model: representative model for the run = the model of the highest
@@ -78,7 +78,7 @@ GROUP BY run_id;
 `;
 
 /**
- * `traces` view — one row per trace, aggregated over its runs.
+ * `traces` view - one row per trace, aggregated over its runs.
  *
  * Design decisions:
  *  - outcome: outcome of the LATEST run by started_at (`arg_max(outcome,

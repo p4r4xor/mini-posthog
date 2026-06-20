@@ -12,7 +12,7 @@ import type { LlmPlanner, PlanContext } from "./types.js";
  *
  * Uses the Anthropic SDK with FORCED structured output via tool-use: the model
  * is required to call `emit_query_plan`, and we return the raw tool input as
- * `unknown`. The hybrid layer validates it with `QueryPlan.safeParse` — this
+ * `unknown`. The hybrid layer validates it with `QueryPlan.safeParse` - this
  * class never trusts the model and never produces SQL.
  *
  * If no API key is configured, `available()` returns false so the hybrid layer

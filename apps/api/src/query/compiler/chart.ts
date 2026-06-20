@@ -1,7 +1,7 @@
 import type { ChartHint, Dimension, QueryPlan } from "@ata/contracts";
 
 /**
- * Chart selection actually lives in the planner — the plan already carries
+ * Chart selection actually lives in the planner - the plan already carries
  * `chartHint`, and the compiler's job is a faithful QueryPlan→CompiledQuery
  * translation, not chart selection. We still expose a tiny helper so callers
  * (and tests) have one place that documents the intended mapping.

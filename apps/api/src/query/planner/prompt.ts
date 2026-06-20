@@ -15,7 +15,7 @@ import {
  * forced tool call (docs/architecture.md §10, step 2).
  *
  * The schema mirrors the QueryPlan Zod contract closely enough to steer the
- * model, but it is NOT the source of truth — the hybrid layer re-validates with
+ * model, but it is NOT the source of truth - the hybrid layer re-validates with
  * `QueryPlan.safeParse`. This file only constrains; it never trusts.
  */
 
@@ -31,7 +31,7 @@ export function buildSystemPrompt(): string {
     "QueryPlan for an AI-agent trace-analytics engine. You do NOT write SQL or",
     "code. You ONLY call the `emit_query_plan` tool with values drawn from the",
     "whitelists below. If the question cannot be expressed within this grammar,",
-    "still call the tool with your best valid attempt — never invent fields.",
+    "still call the tool with your best valid attempt - never invent fields.",
     "",
     "GRAINS (level): event | run | trace.",
     `  - event: reads raw events. Measures: ${EVENT_MEASURES.join(", ")}.`,
@@ -62,7 +62,7 @@ export function buildSystemPrompt(): string {
     "OTHER: sort { by: 'metric'|'time'|<categorical dim>, dir: 'asc'|'desc' } (optional);",
     "  limit (optional positive int); chartHint ∈ [line, bar, table] (required).",
     "  Use 'line' for time-series, 'bar' for categorical breakdowns, 'table' for detail.",
-    "  Do NOT set timeRange — the host injects it.",
+    "  Do NOT set timeRange - the host injects it.",
   ].join("\n");
 }
 

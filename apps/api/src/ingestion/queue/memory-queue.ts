@@ -7,7 +7,7 @@ const delay = (ms: number): Promise<void> =>
 /**
  * In-process FIFO EventQueue for tests and single-process dev (no Redis needed).
  * Same contract as the Redis impl: at-least-once (a failing batch is requeued).
- * Not durable across restarts — that's exactly the gap Redis/Kafka close.
+ * Not durable across restarts - that's exactly the gap Redis/Kafka close.
  */
 export class MemoryEventQueue implements EventQueue {
   private readonly queue: QueuedMessage[] = [];

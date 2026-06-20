@@ -1,5 +1,5 @@
 /**
- * Generator tests — no network. We capture events two ways:
+ * Generator tests - no network. We capture events two ways:
  *  - directly from the pure `generateTrace` SimCall stream, and
  *  - by driving a REAL @ata/sdk client whose `fetch` is mocked, then parsing
  *    the captured request bodies with the `CaptureEvent` wire schema.
