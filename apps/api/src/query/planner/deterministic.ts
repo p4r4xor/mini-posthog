@@ -1,4 +1,5 @@
 import type { QueryPlan } from "@ata/contracts";
+import { composePlan } from "./compose.js";
 import type { PlanContext } from "./types.js";
 
 /**
@@ -285,8 +286,10 @@ const TEMPLATES: Template[] = [
 ];
 
 /**
- * Try every template in order; return the first QueryPlan that matches, or
- * `null` if the NL doesn't map to any known catalog pattern.
+ * Try every exact template in order; return the first match. If none match, fall
+ * back to the general slot-based composer (covers the broad metric×dimension×
+ * filter×grain space). Returns null only when neither produces a plan — then the
+ * hybrid layer tries the LLM.
  */
 export function matchDeterministic(nl: string, ctx: PlanContext): QueryPlan | null {
   const text = normalize(nl);
@@ -295,5 +298,5 @@ export function matchDeterministic(nl: string, ctx: PlanContext): QueryPlan | nu
     const plan = template(text, ctx);
     if (plan) return plan;
   }
-  return null;
+  return composePlan(text, ctx);
 }
