@@ -2,58 +2,81 @@ import {
   CaptureEvent,
   type CaptureEventResult,
   type CaptureResponse,
-  captureEventToRow,
-  type EventRow,
-  type EventStore,
 } from "@ata/contracts";
+import type { BlobStore } from "../blob/blob-store.js";
+import { externalizePayload } from "./payload.js";
+import type { EventQueue } from "./queue/event-queue.js";
 
 /**
- * Ingestion service (docs/architecture.md §12).
+ * Ingestion service (docs/architecture.md §12) — the EDGE of the async pipeline.
  *
- * Validates each event at the edge, maps valid ones to flat storage rows, and
- * inserts them idempotently. Validation is per-event (partial success): one
- * malformed event never blocks the rest of the batch — it is rejected and
- * reported with its index/error while the valid events still proceed.
+ * It does NOT touch the database. Per request it:
+ *   1. checks backpressure (queue depth) and sheds load with a signal the HTTP
+ *      layer turns into 429 — the SDK already backs off on 429;
+ *   2. validates each event (per-event partial success);
+ *   3. externalizes each valid event's payload to the BlobStore, leaving a slim
+ *      event (the 4 KB of text never enters the queue);
+ *   4. enqueues the slim events and returns fast (HTTP 202).
+ *
+ * The worker drains the queue and does the idempotent insert, so `accepted` here
+ * means "buffered for processing", and dedup is resolved downstream (hence
+ * `duplicates: 0` at this layer).
  */
-export class IngestionService {
-  constructor(private readonly store: EventStore) {}
+export interface IngestionOptions {
+  /** Reject (429) once the queue backlog reaches this depth. */
+  maxQueueDepth: number;
+}
 
-  async capture(events: unknown[], projectId: string): Promise<CaptureResponse> {
-    const rows: EventRow[] = [];
+export type IngestionResult =
+  | { status: "accepted"; response: CaptureResponse }
+  | { status: "backpressure"; depth: number };
+
+export class IngestionService {
+  constructor(
+    private readonly queue: EventQueue,
+    private readonly blob: BlobStore,
+    private readonly opts: IngestionOptions,
+  ) {}
+
+  async capture(events: unknown[], projectId: string): Promise<IngestionResult> {
+    const depth = await this.queue.depth();
+    if (depth >= this.opts.maxQueueDepth) {
+      return { status: "backpressure", depth };
+    }
+
+    const slim: CaptureEvent[] = [];
     const results: CaptureEventResult[] = [];
     let rejected = 0;
 
-    events.forEach((raw, index) => {
-      const parsed = CaptureEvent.safeParse(raw);
-      if (parsed.success) {
-        rows.push(captureEventToRow(parsed.data, projectId));
-        return;
+    for (let index = 0; index < events.length; index++) {
+      const parsed = CaptureEvent.safeParse(events[index]);
+      if (!parsed.success) {
+        rejected += 1;
+        results.push({
+          eventId: extractEventId(events[index]) ?? `index:${index}`,
+          status: "rejected",
+          error: parsed.error.issues
+            .map((i) => `${i.path.join(".")}: ${i.message}`)
+            .join("; "),
+        });
+        continue;
       }
-      rejected += 1;
-      const eventId =
-        raw &&
-        typeof raw === "object" &&
-        typeof (raw as { eventId?: unknown }).eventId === "string"
-          ? (raw as { eventId: string }).eventId
-          : undefined;
-      results.push({
-        // CaptureEventResult requires an eventId; fall back to a positional id
-        // when the malformed event didn't carry a usable one.
-        eventId: eventId ?? `index:${index}`,
-        status: "rejected",
-        error: parsed.error.issues
-          .map((i) => `${i.path.join(".")}: ${i.message}`)
-          .join("; "),
-      });
-    });
+      // Strip large payload to the BlobStore BEFORE enqueue — keeps the queue slim.
+      slim.push(await externalizePayload(parsed.data, this.blob));
+    }
 
-    const insert = await this.store.insertBatch(rows);
-
+    const accepted = await this.queue.enqueue(projectId, slim);
     return {
-      accepted: insert.inserted,
-      duplicates: insert.duplicates,
-      rejected,
-      results,
+      status: "accepted",
+      response: { accepted, duplicates: 0, rejected, results },
     };
   }
+}
+
+function extractEventId(raw: unknown): string | undefined {
+  if (raw && typeof raw === "object") {
+    const id = (raw as { eventId?: unknown }).eventId;
+    if (typeof id === "string") return id;
+  }
+  return undefined;
 }

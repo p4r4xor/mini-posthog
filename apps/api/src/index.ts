@@ -1,13 +1,26 @@
 /**
- * @ata/api entrypoint — server bootstrap.
+ * @ata/api entrypoint — server bootstrap (docs/architecture.md §12).
  *
- * Selects the storage engine from config, initialises it, wires the ingestion +
- * query services into the Fastify app, and listens. The app builder lives in
- * http/app.ts so integration tests can inject an in-memory store.
+ * Wires the async ingestion spine: HTTP /capture → EventQueue → IngestionWorker →
+ * EventStore, with payloads externalized to a BlobStore. The worker runs in-process
+ * here for the prototype; in production it's a separate, horizontally-scaled
+ * deployment. The app builder lives in http/app.ts so tests can inject deps.
  */
-import { API_PORT, STORAGE_ENGINE } from "./config.js";
+import { LocalBlobStore } from "./blob/local-blob-store.js";
+import {
+  API_PORT,
+  BLOB_DIR,
+  MAX_QUEUE_DEPTH,
+  QUEUE_KIND,
+  REDIS_URL,
+  STORAGE_ENGINE,
+  WORKER_BATCH_MS,
+  WORKER_BATCH_SIZE,
+} from "./config.js";
 import { buildApp } from "./http/app.js";
 import { IngestionService } from "./ingestion/ingestion-service.js";
+import { createQueue } from "./ingestion/queue/queue-factory.js";
+import { IngestionWorker } from "./ingestion/worker.js";
 import { QueryService } from "./query/query-service.js";
 import { createEventStore } from "./storage/store-factory.js";
 
@@ -15,14 +28,40 @@ async function main(): Promise<void> {
   const store = createEventStore(STORAGE_ENGINE);
   await store.init();
 
-  const app = await buildApp({
-    store,
-    ingestion: new IngestionService(store),
-    query: new QueryService(store),
+  const blob = new LocalBlobStore(BLOB_DIR);
+  const queue = createQueue(QUEUE_KIND, { redisUrl: REDIS_URL });
+
+  const ingestion = new IngestionService(queue, blob, { maxQueueDepth: MAX_QUEUE_DEPTH });
+  const worker = new IngestionWorker(queue, store, {
+    batchSize: WORKER_BATCH_SIZE,
+    batchMs: WORKER_BATCH_MS,
   });
 
+  // Start the worker loop (in-process for the prototype).
+  const workerAbort = new AbortController();
+  void worker.start(workerAbort.signal);
+
+  const app = await buildApp({
+    store,
+    ingestion,
+    query: new QueryService(store),
+    blob,
+  });
+
+  const shutdown = async (): Promise<void> => {
+    workerAbort.abort();
+    await app.close();
+    await queue.close();
+    await store.close();
+    process.exit(0);
+  };
+  process.on("SIGINT", shutdown);
+  process.on("SIGTERM", shutdown);
+
   await app.listen({ port: API_PORT, host: "0.0.0.0" });
-  console.log(`[ata/api] listening on :${API_PORT} (engine=${STORAGE_ENGINE})`);
+  console.log(
+    `[ata/api] listening on :${API_PORT} (engine=${STORAGE_ENGINE}, queue=${QUEUE_KIND})`,
+  );
 }
 
 main().catch((err) => {

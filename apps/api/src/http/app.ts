@@ -1,8 +1,10 @@
 import type { EventStore, TraceFilter } from "@ata/contracts";
 import cors from "@fastify/cors";
 import Fastify, { type FastifyInstance } from "fastify";
+import type { BlobStore } from "../blob/blob-store.js";
 import { resolveProjectId } from "../config.js";
 import type { IngestionService } from "../ingestion/ingestion-service.js";
+import { hydratePayload } from "../ingestion/payload.js";
 import type { QueryService } from "../query/query-service.js";
 
 /** Dependencies injected into the app — tests pass a :memory: store. */
@@ -10,6 +12,8 @@ export interface AppDeps {
   store: EventStore;
   ingestion: IngestionService;
   query: QueryService;
+  /** For hydrating externalized payloads (input/output) in the explorer. */
+  blob: BlobStore;
 }
 
 /** Project used for the query explorer in this single-tenant prototype. */
@@ -64,8 +68,17 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
         .send({ error: "Request body must be { events: CaptureEvent[] }" });
     }
 
-    const response = await deps.ingestion.capture(events, projectId);
-    return reply.code(200).send(response);
+    const result = await deps.ingestion.capture(events, projectId);
+    if (result.status === "backpressure") {
+      // Shed load — the SDK backs off on 429. The queue is the shock absorber;
+      // this is the edge telling producers to slow down before it overflows.
+      return reply
+        .code(429)
+        .header("retry-after", "1")
+        .send({ error: "ingestion overloaded, retry later", depth: result.depth });
+    }
+    // 202 Accepted: events are buffered; the worker inserts them asynchronously.
+    return reply.code(202).send(result.response);
   });
 
   // --- Query -------------------------------------------------------------
@@ -115,7 +128,15 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
     if (!detail) {
       return reply.code(404).send({ error: "Trace not found" });
     }
-    return reply.code(200).send(detail);
+    // Hydrate externalized payloads (input/output) from the blob store so the
+    // explorer shows full text, even though the hot row only stored a ref.
+    const events = await Promise.all(
+      detail.events.map(async (e) => ({
+        ...e,
+        metadata: await hydratePayload(e, deps.blob),
+      })),
+    );
+    return reply.code(200).send({ ...detail, events });
   });
 
   return app;
