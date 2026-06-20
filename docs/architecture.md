@@ -394,15 +394,30 @@ In production the `runs` CTE is the materialized `runs` rollup table, not a subq
 
 ## 10. NL translation (hybrid)
 
-1. **Deterministic templates** run first — keyword/regex match the catalog + common
-   variants → `QueryPlan`. Offline, free, fast; covers the example questions.
-2. **LLM planner** fallback — Claude, constrained to emit the `QueryPlan` JSON via a
-   tool/output schema, given the metric/dimension/field whitelist in the prompt.
-3. **Validate** the output against the same Zod schema; reject if off-grammar.
-4. **Compile** the validated plan to the active dialect with bound params.
+A question becomes a validated `QueryPlan` through layers that each fall forward to
+the next — most queries never reach the LLM:
 
-No arbitrary SQL/code ever reaches the engine. Unsupported NL → clean rejection
-with a helpful message and the supported catalog.
+1. **Time window** — `parseTimeRange(nl)` extracts "on 18th June" / "last 24 hours"
+   / "between June 1 and June 10" / "yesterday". Precedence: **NL-parsed > explicit
+   request `timeRange` (UI) > default 7-day lookback**.
+2. **Deterministic templates** — keyword match for the 8 catalog questions → exact
+   plans. Offline, free, fast.
+3. **Slot composer** — for anything outside the catalog, extract
+   `<agg> <measure> by <dimension> [over <grain>] [failed/successful] [top N]` into a
+   valid plan ("total cost by user", "p99 LLM latency by model", "errors by error
+   type", "average run duration by agent", …). Still offline, no API key. Dimension
+   implies the event-type scope (`by model`→`llm_call`) so there are no null buckets.
+4. **LLM planner (optional)** — Claude, constrained to emit a `QueryPlan` via
+   tool-use, only when 2–3 miss *and* `ANTHROPIC_API_KEY` is set.
+5. **Validate** — every candidate (template, composer, or LLM) passes
+   `QueryPlan.safeParse` before use. This is the single safety gate; off-grammar
+   output is rejected, never executed.
+6. **Compile** — the validated plan → `CompiledQuery` → the adapter's SQL with
+   bound parameters.
+
+No arbitrary SQL/code ever reaches the engine. Unsupported NL → clean rejection with
+the supported catalog. Known grammar gaps (ratio-of-sums, HAVING, multi-metric,
+period-over-period) are tracked in §17.
 
 ---
 
@@ -437,37 +452,49 @@ await analytics.flush();
 
 ---
 
-## 12. Ingestion protocol
+## 12. Ingestion protocol — the async spine (BUILT)
 
-- `POST /capture` accepts a batch of `CaptureEvent`s. Validates (required fields per
-  event type) and returns fast with per-event status (207-style partial success).
-- **Dedup** by `eventId` (at-least-once friendly).
-- **Buffer + batched write** to the active `EventStore` (ClickHouse needs large
-  batches — never per-event inserts).
-- **Local project/API-key:** hardcoded `dev_project_key` → `projectId`, carried into
-  every row's leading sort key (multi-tenant-ready schema even though single-tenant
-  in the demo).
-- **Distributed path (documented, not built):** thin validate-and-enqueue endpoint →
-  queue (Kafka/Redis) → async workers → batched insert; big payloads pass references
-  not values; dead-letter on repeated failure; horizontal worker scaling for
-  backpressure.
+The pipeline is decoupled end-to-end; `/capture` never touches the database:
 
-### Backpressure & idempotency (four layers)
+```
+SDK ─HTTP {events}─▶ POST /capture ─▶ IngestionService ─▶ EventQueue ─▶ IngestionWorker ─▶ EventStore
+                         │ validate                 (slim events)        │ batch + idempotent insert
+                         └─ externalize payload ─▶ BlobStore (S3/FS)     ▼  return 202 / 429
+```
+
+- **`POST /capture`** — `x-api-key` → `projectId` (401 if unknown). Validates each
+  `CaptureEvent` (per-event partial success). **Externalizes payload** (top-level
+  `input`/`output` text → BlobStore, replaced by a small `metadata.payloadRef`).
+  Enqueues the **slim** events and returns **202** (or **429** when queue
+  depth ≥ `maxQueueDepth` — the SDK backs off). It does NOT write to the DB.
+- **`EventQueue`** (port) — `MemoryEventQueue` (tests) / `RedisStreamQueue`
+  (`XADD`+`MAXLEN`, consumer-group `XREADGROUP`→`XACK`, `XAUTOCLAIM` crash recovery,
+  dead-letter stream). Carries slim events (~300 B), never the ~4 KB payload.
+- **`IngestionWorker`** — drains in large batches → `captureEventToRow` →
+  `store.insertBatch` (idempotent by `eventId`; at-least-once safe). In-process for
+  the prototype; a separate, horizontally-scaled deployment in prod (scale on
+  consumer lag).
+- **Payload externalization** — the prompt/response text (the bulk of 4 KB/event,
+  never aggregated) goes to object storage (FS now, S3 in prod), keeping the queue
+  and hot store ~200–400 B/row (§6). The explorer hydrates it back on read.
+- **Local project/API-key** — hardcoded `dev_project_key` → `projectId`, carried
+  into every row's leading sort key (multi-tenant-ready, single-tenant in the demo).
+
+### Backpressure & idempotency (layers, current status)
 
 | Layer | Mechanism | Status |
 | --- | --- | --- |
-| SDK in-memory queue | bounded `maxQueueSize`, drop-newest + `onError` | built |
-| SDK → API transport | retry w/ exp backoff + jitter on `429`/`5xx` (server can push back) | built |
-| API ingestion | validate → batched write; **emit `429` when the buffer is full** | partial (429 shedding TODO) |
-| Kafka shock-absorber | decouples API from DB; CH outage → events buffer; backpressure = consumer lag, not a crash | documented |
+| SDK in-memory queue | bounded `maxQueueSize`, drop-newest + `onError` | **built** |
+| SDK → API transport | retry w/ exp backoff + jitter on `429`/`5xx` | **built** |
+| API edge | validate + externalize + enqueue; **`429` when queue depth ≥ cap** | **built** |
+| Queue buffer | Redis Streams decouples API from DB; DB stall → events buffer; backpressure = depth/lag, not a crash | **built (Redis, local)** |
+| Durable buffer at scale | Kafka/Redpanda: disk-backed (days), partitions, replication | documented (§8) |
 
-**Idempotency** is at-least-once + client-generated `eventId`. DuckDB enforces it
-with a PK (`ON CONFLICT DO NOTHING`); ClickHouse can't (no unique constraint), so
-it uses `ReplacingMergeTree` (eventual, merge-time dedup) **plus API-side `eventId`
-dedup** so reads avoid the expensive `FINAL`. ClickHouse's native
-insert-block dedup also catches byte-identical batch retries for free. The
-`EventStore` contract just says "idempotent insert"; each adapter satisfies it its
-own way — the rest of the system never knows.
+**Idempotency** is at-least-once + client `eventId`. DuckDB enforces it with a PK
+(`ON CONFLICT DO NOTHING`); ClickHouse uses `ReplacingMergeTree` (eventual,
+merge-time dedup) **+ the worker's batched `insertBatch`** so normal reads avoid
+`FINAL`. The `EventStore` contract just says "idempotent insert"; each adapter
+satisfies it its own way.
 
 ---
 
@@ -487,35 +514,157 @@ own way — the rest of the system never knows.
 
 ```
 packages/
-  contracts/   # Zod schemas + types: CaptureEvent, QueryPlan, QueryResult (shared)
+  contracts/   # Zod schemas + types: CaptureEvent, QueryPlan, QueryResult, EventStore (shared)
   sdk/         # client · trace · run · batch-queue · transport(retry)
 apps/
   api/src/
-    http/        # controllers: /capture, /query, /traces (validation + wiring)
-    ingestion/   # IngestionService: validate→dedup→buffer→batched write
+    http/app.ts          # routes: /capture, /query, /traces, /health
+    config.ts            # project/api-key, engine + queue selection, knobs
+    blob/                # BlobStore port + LocalBlobStore (payload externalization)
+    ingestion/
+      ingestion-service.ts # edge: validate → externalize → enqueue → 429
+      payload.ts           # externalizePayload / hydratePayload
+      worker.ts            # IngestionWorker: drain queue → batched idempotent insert
+      queue/               # EventQueue port + memory + redis-stream + factory
     query/
-      planner/   # NL→QueryPlan: deterministic · llm · hybrid
-      compiler/  # QueryPlan→CompiledQuery (per-dialect)
-      query.service.ts
-    domain/      # event unions, Run/Trace aggregates, mappers/
-    storage/     # event-store.ts (interface) + adapters/{duckdb,clickhouse}/
+      planner/   # NL→QueryPlan: time-range · deterministic · compose · llm · hybrid
+      compiler/  # QueryPlan→CompiledQuery (engine-neutral)
+      query-service.ts
+    storage/
+      adapters/duckdb/     # DuckDBEventStore + schema + field-map + sql-render
+      adapters/clickhouse/ # ClickHouseEventStore + schema (RMT, daily partitions, …)
+      store-factory.ts
   web/src/
     features/query/      # NL input · examples · chart/table · latency
     features/explorer/   # run/trace list + detail + filters
     api-client/          # typed over contracts
-simulator/     # uses SDK → demo + ~1M benchmark datasets
-bench/         # runs catalog queries across adapters → latency/size report
-docs/architecture.md
+simulator/     # uses the SDK → demo + ~1M benchmark datasets
+bench/         # streams a dataset into each engine → latency/size/compression report
+docs/architecture.md ; docker-compose.yml (ClickHouse 26.5 + Redis 7.4)
 ```
 
-Stack: TS everywhere, pnpm workspaces. API on Node (Fastify/Express). Web on
-React + Vite + a chart lib (Recharts). DuckDB via `@duckdb/node-api`; ClickHouse via
-`@clickhouse/client` (Docker for local).
+Stack: TS everywhere, pnpm workspaces, Biome (lint+format), vitest, a pre-commit
+gate + CI. API on Fastify. Web on React 19 + Vite 8 + Recharts. DuckDB via
+`@duckdb/node-api`; ClickHouse via `@clickhouse/client`; Redis via `ioredis`.
 
 ---
 
-## 15. Non-goals
+## 15. Component architecture — who talks to whom, and why
 
-Production auth, billing, cloud deploy, complex permissions, full multi-tenant
-account management, pixel-perfect UI, a real queue/worker, cold-tier object
-storage. All documented where they would change for production.
+### Components
+
+| Component | Where it runs | Responsibility |
+| --- | --- | --- |
+| **SDK** (`@ata/sdk`) | inside the user's agent process | build `CaptureEvent`s, batch, retry, flush, backpressure |
+| **`@ata/contracts`** | shared library | the *lingua franca*: wire DTO, `QueryPlan`, `QueryResult`, `EventRow`, `EventStore` port, mappers |
+| **HTTP layer** (`http/app.ts`) | API process | thin Fastify routes; auth + shape-check only |
+| **IngestionService** | API process | edge: validate → externalize payload → enqueue → 429 |
+| **BlobStore** | API process → FS/S3 | store/fetch large payload text |
+| **EventQueue** | API ↔ Redis | buffer between edge and DB (Redis Streams) |
+| **IngestionWorker** | API process (prod: separate) | drain queue → batched idempotent insert |
+| **QueryService** | API process | orchestrate planner → compiler → store → `QueryResult` |
+| **planner / compiler** | API process | NL → `QueryPlan` → `CompiledQuery` |
+| **EventStore adapter** | API ↔ DuckDB/ClickHouse | persistence + analytics SQL |
+| **Web** (`@ata/web`) | browser | NL query UI + trace explorer |
+| **Simulator / Bench** | CLI | generate data via the SDK / benchmark the adapters |
+
+### Write path (who calls whom, what crosses, why the boundary)
+
+| Edge | What crosses | Why this boundary exists |
+| --- | --- | --- |
+| agent → **SDK** | method calls (`captureLLMCall`, …) | ergonomic API; hides batching/retry/transport |
+| SDK → **`/capture`** | HTTP POST, `{events}` + `x-api-key` | network seam; lets retry/backoff/idempotency live client-side; server-language-agnostic |
+| `/capture` → **IngestionService** | validated request | keep HTTP thin; logic unit-testable |
+| IngestionService → **BlobStore** | `input`/`output` text | keep ~4 KB out of the queue + hot store (cost) |
+| IngestionService → **EventQueue** | slim events + `projectId` | decouple ingest from DB; absorb 10× peak; 429 backpressure |
+| Worker ← **EventQueue** | slim events (consumer group) | drain at the DB's pace; horizontal scaling; at-least-once |
+| Worker → **EventStore** | `EventRow[]` (large batch) | idempotent batched write; engine-neutral via the port |
+
+### Read path
+
+| Edge | What crosses | Why |
+| --- | --- | --- |
+| web → **`/query`** | `{ q }` (natural language) | the product surface |
+| QueryService → **planner** | `nl` → `QueryPlan` | NL kept entirely separate from execution |
+| QueryService → **compiler** | `QueryPlan` → `CompiledQuery` | one validated IR; safety + portability |
+| QueryService → **EventStore.aggregate** | `CompiledQuery` + `projectId` | tenant scoping enforced in the signature |
+| web → **`/traces`/`:id`** | filters / id → `TraceSummary[]`/`TraceDetail` | explorer; `getTrace` then hydrates payloads from BlobStore |
+| planner → **Anthropic** (optional) | constrained tool-use → unvalidated plan | long-tail NL; output re-validated by `QueryPlan` (the gate) |
+
+**The three load-bearing seams** (everything else is replaceable behind them):
+`EventStore` (DuckDB ↔ ClickHouse), `EventQueue` (Redis ↔ Kafka), `BlobStore`
+(FS ↔ S3). Swapping any is a new adapter class + a config flag — no call site moves.
+
+---
+
+## 16. Design rationale — why this way
+
+- **Wide flat event table + JSON bag** (not nested spans, not per-type tables): the
+  query patterns are per-event aggregations; flat rows avoid joins (ClickHouse's
+  weak spot) and absorb schema change. Sparse nulls compress to ~nothing. (§4, §6)
+- **Four layered types + mappers** (wire DTO / domain / row / result): the wire is a
+  strict contract that makes illegal events unrepresentable; storage is optimized
+  for scan; neither leaks into the other. (§4, §5)
+- **`QueryPlan` IR, never NL→SQL**: one closed, validated structure → safety (no
+  injection), portability (one plan → two dialects), testability (planner and engine
+  never import each other). (§9)
+- **`EventStore` port + two real adapters**: the storage choice is *earned by a
+  benchmark + a 1B/day argument*, not asserted — and stays swappable. DuckDB =
+  embedded/local; ClickHouse = production scale. (§8)
+- **Async queue + worker + payload externalization**: the design target is up to
+  **1B events/day** (§8). `/capture` must return fast and shed load; the queue
+  absorbs the 10× peak; keeping 4 KB payloads out of the queue/hot store is the cost
+  lever that makes the buffer and the cluster affordable. (§6, §12)
+- **Redis Streams now, Kafka/Redpanda in prod**: Redis is one container and the
+  durability gap is acceptable for analytics; Kafka wins at scale on disk-backed
+  buffering (days vs RAM-minutes), partitions, and replication. Payload
+  externalization stretches Redis's RAM-bounded window ~13×. (§8)
+- **Deterministic-first hybrid NL**: templates + a slot composer cover the bulk
+  offline (no API key, fast, predictable); the LLM is a constrained fallback behind
+  the same validation gate. (§10)
+- **Tenant scoping in the `aggregate` signature**: scoping is a required argument the
+  adapter always applies, so a cross-tenant leak isn't a thing a caller can forget.
+- **ClickHouse specifics**: daily partitions (day-granular TTL at 1B/day), `RMT`
+  dedup, `LowCardinality`/`Enum8`, bloom skip-indexes for explorer lookups. (§6)
+- **Quality gate**: Biome + strict TS + vitest + a pre-commit hook + CI — so
+  cross-package drift and regressions are caught by the CLI, not the editor.
+
+---
+
+## 17. Pending & intentionally deferred
+
+Honest accounting of what is **not** built, why, and what it would take.
+
+**Next up (highest signal):**
+- **gRPC / OTLP transport** in front of `/capture` (own-protobuf). The Redis/worker
+  half of the spine is built; the wire is still HTTP/JSON. Slots in as a gRPC
+  `Capture` service that calls the same `IngestionService` — nothing downstream
+  changes.
+- **AggregatingMergeTree materialized views** for time-series/rollups. `runs`/`traces`
+  are query-time views today; at 1B/day dashboards must read incremental MVs. (§7)
+
+**Production hardening (documented, would swap an adapter):**
+- **Kafka/Redpanda** behind `EventQueue`; **S3** behind `BlobStore`; cold **Parquet**
+  tiering + **TTL/retention**; a **separate worker deployment** (Rust/Go) scaled on
+  consumer lag.
+- **Real auth / multi-tenant account management** (hardcoded dev key today).
+- **Wire `schemaVersion`** + a protobuf schema registry; pipeline observability
+  (consumer-lag metrics, DLQ monitoring).
+
+**Query grammar extensions (small IR additions):**
+- ratio-of-sums (`cost per 1k tokens`), `HAVING` (`tools with error rate > 10%`),
+  multi-metric results, period-over-period comparison, group-by `metadata`/tags.
+
+**Cross-grain filtering** (event metric filtered by a run/trace attribute) — planned
+as an `events → runs` join (§6 "Cross-grain filtering").
+
+**UI polish:** a time-range picker on the query view (NL parsing works today; the
+API already accepts an explicit range), payload display in the explorer, chart styling.
+
+---
+
+## 18. Non-goals (per the brief)
+
+Production auth, billing, cloud deployment, complex permissions, full multi-tenant
+account management, and pixel-perfect UI are out of scope by the brief. Each is noted
+above where it would change for production.
