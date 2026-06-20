@@ -10,6 +10,45 @@ final submission.
 
 ---
 
+## 0. Deliverables coverage (assignment → where)
+
+This note uses our own structure (§1–§18); the tables below map the assignment's
+required items to it so nothing has to be hunted for.
+
+**Architecture-note deliverables:**
+
+| Required | Section |
+| --- | --- |
+| SDK design | §11 |
+| Batching and retry behavior | §11 |
+| Ingestion protocol | §12 |
+| Storage engine choice | §8 |
+| Schema / data model | §4, §5, §6 |
+| Query translation approach | §9, §10 |
+| Frontend charting approach | §13 |
+| Performance results | §8 (1M benchmark) |
+| Production scaling notes | §8, §17 |
+| Supported NL query patterns | §9 ("Supported NL query patterns") + README |
+| Notes on what was intentionally skipped | §17, §18 |
+
+**Storage-decision "Explain:" items:**
+
+| Required | Section |
+| --- | --- |
+| Why this engine | §8 |
+| Expected query patterns | §9 |
+| Write / ingestion tradeoffs | §8, §12 |
+| Indexing / partitioning / materialization | §6, §7 |
+| Local development complexity | §8 (DuckDB zero-ops; ClickHouse via Docker) |
+| Would it work in production | §8 |
+| What changes at 10M / 100M / 1B | §8 |
+
+**Artifacts:** working local app (HTTP + gRPC API + web UI), JS/TS SDK
+(`packages/sdk`), toy simulator using the SDK (`simulator/`), setup + run
+instructions (`README.md`).
+
+---
+
 ## 1. Scope
 
 Scoping is itself a success criterion ("ability to scope a large product into a
@@ -389,6 +428,39 @@ SELECT run_model AS model, avg(run_cost) AS value
 FROM runs WHERE run_status={p3:String} GROUP BY run_model;
 ```
 In production the `runs` CTE is the materialized `runs` rollup table, not a subquery.
+
+---
+
+### Supported NL query patterns
+
+The deterministic layer (no API key) covers, in order of specificity:
+
+1. **Catalog (exact templates):** the 8 prompt questions — avg LLM latency by model
+   over time; which tools fail the most; token usage by agent type; cost per
+   successful run by model; top 10 slowest traces; error rate by tool name; number
+   of runs per hour; average steps per run by outcome.
+2. **Slot composer** — `<agg> <measure> by <dimension> [over <grain>] [failed/
+   successful] [top N]`. Covers hundreds of phrasings, e.g. *total cost by user*,
+   *p99 LLM latency by model*, *number of llm calls by model*, *errors by error
+   type*, *average run duration by agent*, *which models cost the most*.
+   - **aggregations:** count, count_distinct, sum, avg, min, max, quantile (p50/p90/
+     p95/p99, median), ratio (rates).
+   - **measures:** latencyMs, costUsd, totalTokens (event); durationMs, computeMs,
+     stepCount (run/trace).
+   - **dimensions:** model, tool, agent, user, status, outcome, errorType, eventType.
+3. **Time ranges** (parsed from the question, override the default 7-day lookback):
+   relative (*last 24 hours*, *past 3 weeks*, *today*, *yesterday*, *this/last
+   week/month*), absolute (*on 18th June*, *on 2026-06-20*, *on 20/06/2026* —
+   DD/MM/YYYY, MM/DD/YYYY, YYYY/MM/DD), spans (*between June 1 and June 10*, *since
+   June 15*).
+4. **Grains:** per second / minute / hour / day / week / month.
+5. **LLM fallback (optional, `ANTHROPIC_API_KEY`)** — fills any valid `QueryPlan`
+   for phrasings outside the above; output re-validated by the same Zod schema.
+
+Unsupported questions are rejected cleanly with the supported list — never guessed,
+never run as raw SQL. **Known gaps** (need small IR additions, §17): ratio-of-sums
+(*cost per 1k tokens*), `HAVING` (*tools with error rate > 10%*), multi-metric,
+period-over-period, group-by `metadata`/tags, and arbitrary "for <entity>" filters.
 
 ---
 

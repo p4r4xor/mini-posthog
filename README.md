@@ -1,307 +1,150 @@
-# Work Trial Task: Agent Trace Analytics Engine
+# Agent Trace Analytics
 
-Build a mini PostHog/Mixpanel-style analytics product for AI agent traces.
+A mini PostHog/Mixpanel for **AI agent traces** — log traces from an SDK, ingest them
+through an async pipeline, store them in a **swappable analytical engine (DuckDB or
+ClickHouse)**, and explore them with **natural-language queries**, charts, and a trace
+explorer.
 
-The goal is to evaluate how you think across SDK design, ingestion, storage
-engine choice, query performance, frontend UX, infrastructure tradeoffs, and
-product scope. This should be scoped as a credible 6-hour prototype. We care
-more about a thoughtful, working vertical slice than a broad unfinished system.
+- **Full design + rationale:** [`docs/architecture.md`](docs/architecture.md) — component
+  communication map (§15), design rationale (§16), pending/skipped (§17–§18), the earned
+  storage decision + 1M benchmark (§8).
+- **Original assignment:** [`docs/TASK.md`](docs/TASK.md).
 
-## Product Goal
-
-AI agents can run for many steps. A single run may include a user prompt,
-multiple LLM calls, tool calls, retries, errors, intermediate reasoning steps,
-and a final response.
-
-Your task is to build an end-to-end analytics system that can log those traces
-and make them immediately explorable.
-
-A user should be able to ask questions like:
-
-- "Show average LLM latency by model over time."
-- "Which tools fail the most?"
-- "Token usage by agent type."
-- "Cost per successful run by model."
-- "Top 10 slowest traces."
-- "Error rate by tool name."
-- "Number of runs per hour."
-- "Average steps per run by outcome."
-
-The app should return a useful chart or table quickly for supported queries on
-a large local dataset.
-
-## What To Build
-
-Build a local full-stack prototype with:
-
-- A JS/TS SDK for logging agent traces.
-- SDK batching and flush behavior.
-- An ingestion API.
-- Durable local storage.
-- A query API for analytics.
-- A natural-language query input.
-- Chart/table rendering.
-- A trace/run explorer.
-- A toy agent simulator that uses your SDK to generate realistic traces.
-
-The example fixture in [`fixtures/example-events.json`](fixtures/example-events.json)
-is only guidance. You own the event model, logging API design, batching
-behavior, storage model, and query strategy.
-
-## Non-Goals
-
-Do not spend time on:
-
-- Production authentication.
-- Billing.
-- Cloud deployment.
-- Complex permissions.
-- Full multi-tenant account management.
-- Pixel-perfect UI polish.
-
-It is fine to hardcode local development credentials and project IDs if the
-tradeoff is documented.
-
-## Expected SDK Shape
-
-The SDK should feel PostHog-like: initialize once, capture events through a
-simple API, batch automatically, retry failed sends where reasonable, and expose
-an explicit flush method.
-
-Example:
-
-```ts
-const analytics = initAgentAnalytics({
-  apiKey: "dev_project_key",
-  host: "http://localhost:3000",
-  flushAt: 50,
-  flushIntervalMs: 5000,
-});
-
-const trace = analytics.startTrace({
-  agentName: "research-agent",
-  userId: "user_123",
-  input: "Find pricing for sandbox providers",
-});
-
-trace.captureLLMCall({
-  model: "gpt-5.2",
-  latencyMs: 842,
-  inputTokens: 1200,
-  outputTokens: 310,
-  costUsd: 0.0142,
-});
-
-trace.captureToolCall({
-  toolName: "web_search",
-  latencyMs: 1200,
-  status: "success",
-});
-
-trace.captureError({
-  errorType: "rate_limit",
-  message: "Provider returned 429",
-});
-
-trace.end({
-  status: "success",
-  output: "Completed research summary",
-});
-
-await analytics.flush();
+```
+SDK ─HTTP/JSON or gRPC─▶ /capture ─▶ EventQueue (Redis Streams) ─▶ Worker ─▶ EventStore (DuckDB│ClickHouse)
+        │ validate + externalize payload → BlobStore (FS│S3)                 ▲
+        └ 202 / 429 (backpressure)                          NL query ─▶ planner → compiler → aggregate → chart
 ```
 
-Your exact API can differ, but it must support:
+## Packages
 
-- Trace lifecycle: start, events, end.
-- Step-level events.
-- LLM calls.
-- Tool calls.
-- Errors and retries.
-- Metadata and tags.
-- Batching by count and/or time.
-- Retry behavior for failed ingestion.
-- Explicit flush on shutdown.
+| Path | What |
+| --- | --- |
+| `packages/contracts` | Shared Zod schemas + types: the wire `CaptureEvent`, `QueryPlan` IR, `QueryResult`, `EventStore` port — the contract everything depends on |
+| `packages/sdk` | TS logging SDK: hierarchical trace→run→event, count/time batching, retry w/ backoff, bounded-queue backpressure, `flush`/`shutdown` |
+| `apps/api` | Ingestion (HTTP + gRPC → queue → worker → store), NL query, trace explorer |
+| `apps/web` | React + Recharts UI: NL query + charts + trace explorer |
+| `simulator` | Toy agent simulator — generates realistic traces **through the SDK** (demo + ~1M) |
+| `bench` | Storage benchmark (DuckDB vs ClickHouse) + transport benchmark (gRPC vs HTTP) |
 
-## Backend Requirements
+## Prerequisites
 
-Implement:
+- **Node ≥ 20**, **pnpm 8+**
+- **Docker** — only for the ClickHouse + Redis path; the DuckDB quick-start needs nothing.
 
-- A capture endpoint, for example `POST /capture`.
-- Validation for required event fields.
-- A local project/API-key concept, even if hardcoded for local development.
-- Durable persistence.
-- Query endpoints used by the frontend.
-- Safe natural-language query handling.
-
-Natural-language support can use deterministic parsing, an LLM-backed planner,
-or a hybrid. If you use an LLM, it must produce a constrained query/chart plan.
-Do not execute arbitrary generated code or arbitrary generated SQL directly.
-
-## Storage Engine Decision
-
-A key part of this task is choosing the right analytical storage approach.
-
-Include a short decision note comparing at least two options, preferably from:
-
-- ClickHouse
-- DuckDB
-- Postgres
-- SQLite
-- Parquet files
-- Any other justified OLAP/event-store option
-
-Explain:
-
-- Why you chose the engine.
-- Expected query patterns.
-- Write and ingestion tradeoffs.
-- Indexing, partitioning, or materialization strategy.
-- Local development complexity.
-- Whether the choice would still work in production.
-- What you would change at 10M, 100M, and 1B events.
-
-We do not expect production infrastructure, but we do expect production
-judgment.
-
-## Frontend Requirements
-
-Build a simple analytics UI with:
-
-- Natural-language query input.
-- Example questions.
-- Chart/table output.
-- Visible query latency.
-- Trace/run explorer.
-- Filters for time range, agent name, model, tool name, and status.
-
-The UI does not need to be beautiful, but it should be usable enough to
-understand the product and evaluate the core workflows.
-
-## Simulator Requirements
-
-Build a toy agent simulator that imports and uses your SDK.
-
-It should generate traces with:
-
-- Multiple agents.
-- Multiple users.
-- Multiple models.
-- Multiple tools.
-- Successes and failures.
-- Retries and errors.
-- Variable latency, token usage, and cost.
-- Enough volume to benchmark query speed.
-
-It should support:
-
-- A small demo dataset for quick local testing.
-- A larger local benchmark dataset around 1M events.
-
-## Example Fixture
-
-See [`fixtures/example-events.json`](fixtures/example-events.json) for a small
-example trace. This is only a starting point. Change the model if your design
-calls for a different schema.
-
-Possible event types include:
-
-- `trace_started`
-- `step_completed`
-- `llm_call`
-- `tool_call`
-- `error`
-- `retry`
-- `trace_completed`
-
-## Suggested Repository Shape
-
-Use whatever structure best fits your stack. One reasonable shape is:
-
-```txt
-.
-├── apps/
-│   ├── web/          # Frontend UI
-│   └── api/          # Ingestion and query API
-├── packages/
-│   └── sdk/          # JS/TS logging SDK
-├── simulator/        # Toy agent simulator
-├── docs/
-│   └── architecture.md
-└── README.md
+```bash
+pnpm install
 ```
 
-This structure is not required. Keep the repo simple if a simpler structure
-helps you finish a better vertical slice.
+## Quick start (DuckDB — zero external dependencies)
 
-## Evaluation Levels
+Embedded DuckDB + in-memory queue, no Docker. Fastest way to see it end-to-end.
 
-### Level 1: Basic Vertical Slice
+```bash
+# 1) API on :3000 (HTTP) + :50051 (gRPC), DuckDB engine, in-memory queue
+pnpm --filter @ata/api start
 
-- SDK sends events.
-- Backend stores events.
-- UI shows traces.
-- A few hardcoded analytics queries work.
+# 2) generate a demo dataset through the real SDK (new terminal)
+pnpm --filter @ata/simulator exec tsx src/index.ts --mode demo --events 2000
 
-### Level 2: Real Analytics Prototype
+# 3) web UI on :5173 (proxies API calls to :3000)
+pnpm --filter @ata/web dev
+```
 
-- Good trace/event model.
-- Batching and retries work.
-- Multiple chart types.
-- Query latency is visible.
-- Natural-language examples map to real queries.
+Open **http://localhost:5173** and click an example question. With the in-memory queue the
+worker runs in-process, so events are queryable immediately.
 
-### Level 3: Strong Systems Thinking
+## Production engine (ClickHouse + Redis Streams)
 
-- Clear storage engine decision.
-- Sensible indexing or materialization strategy.
-- Handles a large generated dataset.
-- Common queries return quickly.
-- Unsupported queries fail cleanly.
+```bash
+docker compose up -d                      # ClickHouse 26.5 + Redis 7.4
+ATA_ENGINE=clickhouse ATA_QUEUE=redis pnpm --filter @ata/api start
+pnpm --filter @ata/simulator exec tsx src/index.ts --mode demo --events 20000
+```
 
-### Level 4: Production Judgment
+The web UI, queries, and explorer are identical — the **engine and queue are swapped by
+env vars only**. With Redis, ingestion is fully async (capture returns `202`; a worker
+drains the stream into ClickHouse), and prompt/response payloads are externalized to the
+blob store (only a small reference flows through the queue).
 
-- Explains scaling path to larger event volumes.
-- Discusses ClickHouse, DuckDB, Postgres, or similar tradeoffs well.
-- Shows awareness of ingestion backpressure, schema evolution, multi-tenancy,
-  retention, and cost.
-- Keeps implementation simple while documenting what would change in production.
+## Simulator
 
-## Deliverables
+```bash
+pnpm --filter @ata/simulator exec tsx src/index.ts \
+  --mode demo|benchmark  --events N  --host http://localhost:3000 \
+  --api-key dev_project_key  --days 7  --seed 1
+```
 
-Submit a GitHub repository containing:
+`demo` ≈ 2,000 events; `benchmark` ≈ 1,000,000. Deterministic (seeded), spreads events
+over a historical window, multiple agents/models/tools, successes + failures + retries.
 
-- Working local app.
-- JS/TS SDK inside the repo.
-- Toy agent simulator using the SDK.
-- Setup and run instructions in your submitted README.
-- Short architecture note covering:
-  - SDK design.
-  - Batching and retry behavior.
-  - Ingestion protocol.
-  - Storage engine choice.
-  - Schema/data model.
-  - Query translation approach.
-  - Frontend charting approach.
-  - Performance results.
-  - Production scaling notes.
-- List of supported natural-language query patterns.
-- Notes on what was intentionally skipped.
+## Benchmarks
 
-## Success Criteria
+```bash
+# storage: DuckDB vs ClickHouse (streaming load, memory-safe) — needs ClickHouse up
+pnpm --filter @ata/bench exec tsx src/index.ts --events 200000 --engines duckdb,clickhouse
 
-A strong submission should demonstrate end-to-end product thinking, not just
-isolated coding ability.
+# transport: gRPC vs HTTP — wire size, serialization CPU, loopback throughput
+pnpm --filter @ata/bench exec tsx src/transport-bench.ts --events 100000
+```
 
-We are looking for:
+Latest results + interpretation live in `docs/architecture.md` §8.
 
-- Clean implementation.
-- Practical storage choice.
-- Fast enough analytical queries.
-- Thoughtful batching and ingestion design.
-- Usable frontend.
-- Clear tradeoff reasoning.
-- Ability to scope a large product into a credible 6-hour prototype.
+## Tests & quality gate
 
-The best submissions will make the system work, explain why it works, and
-clearly describe what would change for production scale.
+```bash
+pnpm lint        # Biome (lint + format)
+pnpm typecheck   # tsc across all packages
+pnpm test        # vitest — the ClickHouse suite needs `docker compose up -d clickhouse`
+pnpm check       # lint + typecheck + test
+```
+
+A **pre-commit hook** runs lint + typecheck + tests (excluding the ClickHouse suite, which
+needs a server); **CI** (`.github/workflows/ci.yml`) runs the full gate with a ClickHouse
+service.
+
+## Configuration (env vars)
+
+| Var | Default | Purpose |
+| --- | --- | --- |
+| `ATA_ENGINE` | `duckdb` | storage engine: `duckdb` \| `clickhouse` |
+| `ATA_DB_PATH` | `ata.duckdb` | DuckDB file path |
+| `ATA_PORT` | `3000` | HTTP port |
+| `ATA_GRPC_PORT` | `50051` | gRPC port |
+| `ATA_QUEUE` | `memory` | ingestion queue: `memory` \| `redis` |
+| `ATA_REDIS_URL` | `redis://localhost:6379` | Redis Streams URL |
+| `ATA_BLOB_DIR` | `<cwd>/data/blobs` | externalized-payload dir (FS blob store) |
+| `ATA_MAX_QUEUE_DEPTH` | `100000` | edge backpressure threshold (→ 429) |
+| `ATA_WORKER_BATCH` / `_MS` | `5000` / `1000` | worker insert batch size / max wait |
+| `ATA_CH_URL/USER/PASSWORD/DATABASE` | `http://localhost:8123` / `ata` / `ata` / `ata` | ClickHouse connection |
+| `ANTHROPIC_API_KEY` | — | optional; enables the LLM fallback planner |
+
+Local project/API-key are hardcoded for dev: API key **`dev_project_key`** → project
+**`proj_dev`**.
+
+## Supported natural-language queries
+
+Deterministic-first (no API key needed): exact catalog templates → a slot composer →
+time-range parsing; an optional Claude fallback (`ANTHROPIC_API_KEY`) covers the long tail.
+Full grammar in `docs/architecture.md` §9–§10. Representative examples:
+
+- **Catalog:** *"Average LLM latency by model over time"*, *"Which tools fail the most?"*,
+  *"Token usage by agent type"*, *"Cost per successful run by model"*, *"Top 10 slowest
+  traces"*, *"Error rate by tool name"*, *"Number of runs per hour"*, *"Average steps per
+  run by outcome"*.
+- **Composer families** (`<agg> <measure> by <dimension> [over <grain>] [top N]`): *"total
+  cost by user"*, *"p99 LLM latency by model"*, *"number of llm calls by model"*, *"errors
+  by error type"*, *"average run duration by agent"*, *"which models cost the most"*.
+- **Time ranges:** *"… on 20/06/2026"*, *"… last 24 hours"*, *"… yesterday"*, *"… this
+  week"*, *"… between June 1 and June 10"*, *"… since June 15"*.
+- **Grains:** *"… per second / minute / hour / day / week / month"*.
+
+Unsupported questions are rejected cleanly with the supported list (never guessed, never
+run as raw SQL).
+
+## What was intentionally skipped
+
+Per the brief: production auth, billing, cloud deploy, complex permissions, full
+multi-tenant account management, pixel-perfect UI. Documented production-but-not-built
+items (gRPC→full OTLP, AggregatingMergeTree rollup MVs, Kafka/Redpanda, S3 blob store,
+cold-Parquet tiering) are in `docs/architecture.md` §17.
