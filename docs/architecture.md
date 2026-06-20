@@ -185,6 +185,17 @@ separate compiler is the only thing that turns a validated plan into parameteriz
 This buys safety (every field is a whitelisted enum, no injection surface), portability (one
 plan compiles to both engines), and testability (planner and compiler test separately).
 
+The dialects differ in small mechanical ways the compiler owns per engine. Same plan, two
+render functions:
+
+| | DuckDB | ClickHouse |
+|---|---|---|
+| percentile | `quantile_cont(col, p)` | `quantile(p)(col)` |
+| time bucket | `date_trunc('hour', ts)` | `toStartOfHour(ts)` |
+| dedup | PK `ON CONFLICT DO NOTHING` | ReplacingMergeTree |
+
+A third engine is a third render function with nothing upstream touched.
+
 Translation is layered, cheapest first, and most questions never reach the LLM:
 
 1. Parse a time window if present ("on 18th June", "last 24 hours").
@@ -252,9 +263,15 @@ grouping by a metadata field.
 
 ## prod scaling notes
 
-For 1B/day, ~116k/sec peak, ~4TB/day:
+The shape at 1B/day, ~116k/sec peak, ~4TB/day raw text:
 
-- Kafka in front of the store for a disk-backed buffer (days, not minutes).
+```
+SDK --> L7 LB --> API replicas --> Kafka (partitioned) --> worker pool --> ClickHouse (sharded + replicated)
+                                       big payload --> S3                  dashboard reads from ClickHouse
+```
+
+- Kafka in front of the store for a disk-backed buffer (days not minutes), partitioned so
+  workers scale out.
 - Workers as a separate Go/Rust deployment scaling on consumer lag, not in-process.
 - Hot/cold split: recent data in ClickHouse on fast disk, old partitions aged to Parquet on
   S3 by TTL. Payloads already live in object storage.
@@ -264,6 +281,34 @@ For 1B/day, ~116k/sec peak, ~4TB/day:
 - Multi-tenancy: the query interface requires a project id, so no path can read across tenants
   by omission.
 
+Rough sizing, back of the envelope and not measured at this scale. The slim event is ~300
+bytes and ClickHouse compressed our data ~5x, so the hot store is ~60 to 100 GB/day and 90
+days hot is a few TB per shard. A 3-shard 2-replica cluster of mid nodes (16 vCPU / 64 GB /
+NVMe) carries the peak with query headroom. The text payloads are the real bulk: ~2 TB/day to
+S3 after compression, aged out on a TTL. That lands near $0.0003 to $0.0004 per 1k events, and
+the bill is dominated by cold text in S3 not the hot store. Which is the whole reason we pull
+the payload out at the edge.
+
+Migrating DuckDB to prod is a re-host because the query layer talks to the interface not the
+engine. The cutover I'd run: dual-write to both engines, shadow-read and diff results for a
+week, then flip reads to ClickHouse and retire DuckDB. No SDK or query-plan change, only the
+adapter swaps.
+
+## Observability
+
+At this scale we operate by metrics, not by reading logs. The ones that matter:
+
+- Ingestion: consumer lag (the early warning), enqueue rate vs insert rate, 429 rate,
+  dead-letter count.
+- Query: p50/p95/p99 latency and which planner layer served it (template, composer, or LLM).
+- Storage: parts per partition (insert health), disk per shard, compression ratio.
+- Per-tenant volume and error rate so one noisy project is visible instead of hiding in the
+  aggregate.
+
+The first thing I'd alert on is consumer lag trending up. It means inserts are falling behind
+ingestion and it is exactly what turns into dropped events if ignored. The prototype already
+exposes queue depth and per-query timing in the UI, which are the first two of these.
+
 ## Notes on what was intentionally skipped
 
 Per the brief: no real auth, billing, deploy, permissions, or account management (project and
@@ -271,7 +316,8 @@ key are hardcoded for dev), and no pixel-perfect UI.
 
 Designed but not built, because they only pay off at scale: full OTLP on ingestion (we speak
 our own protobuf), materialized views, Kafka, S3 blob store, cold-Parquet tiering, TTL
-retention, downsampling, projections, and out-of-process workers. Each is a swap behind an
+retention, downsampling, projections, out-of-process workers, and full metrics plus alerting
+(the prototype exposes queue depth and per-query timing only). Each is a swap behind an
 interface that already exists.
 
 ## Summary
@@ -287,6 +333,6 @@ The choices, in one line each:
 - A typed QueryPlan between language and SQL, never NL straight to SQL.
 
 What would be better with more time: materialized views and projections, Kafka, S3 plus
-hot/cold tiering with retention and downsampling, out-of-process workers, a richer plan
-grammar, and full OTLP. Each is an adapter behind an interface we already have, so getting
-there is a re-host, not a rewrite.
+hot/cold tiering with retention and downsampling, out-of-process workers, metrics and
+alerting, a richer plan grammar, and full OTLP. Each is an adapter behind an interface we
+already have, so getting there is a re-host, not a rewrite.
