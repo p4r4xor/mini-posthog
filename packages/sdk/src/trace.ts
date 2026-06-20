@@ -38,6 +38,7 @@ export class TraceImpl implements Trace {
         enqueue: this.ctx.enqueue,
       },
       opts.input,
+      opts.at,
     );
   }
 

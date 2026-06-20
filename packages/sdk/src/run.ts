@@ -44,70 +44,89 @@ export class RunImpl implements Run {
   constructor(
     private readonly ctx: RunContext,
     input: string,
+    at?: string | Date,
   ) {
     this.traceId = ctx.traceId;
     this.runId = ctx.runId;
     // run_started is always the first event (stepIndex 0).
-    this.emit({
-      eventType: "run_started",
-      status: "running",
-      input,
-    });
+    this.emit(
+      {
+        eventType: "run_started",
+        status: "running",
+        input,
+      },
+      at,
+    );
   }
 
   captureLLMCall(opts: CaptureLLMCallOptions): void {
-    this.emit({
-      eventType: "llm_call",
-      model: opts.model,
-      status: opts.status ?? "success",
-      latencyMs: opts.latencyMs,
-      inputTokens: opts.inputTokens,
-      outputTokens: opts.outputTokens,
-      costUsd: opts.costUsd,
-      ...(opts.metadata ? { metadata: this.buildMetadata(opts.metadata) } : {}),
-    });
+    this.emit(
+      {
+        eventType: "llm_call",
+        model: opts.model,
+        status: opts.status ?? "success",
+        latencyMs: opts.latencyMs,
+        inputTokens: opts.inputTokens,
+        outputTokens: opts.outputTokens,
+        costUsd: opts.costUsd,
+        ...(opts.metadata ? { metadata: this.buildMetadata(opts.metadata) } : {}),
+      },
+      opts.at,
+    );
   }
 
   captureToolCall(opts: CaptureToolCallOptions): void {
-    this.emit({
-      eventType: "tool_call",
-      toolName: opts.toolName,
-      status: opts.status ?? "success",
-      latencyMs: opts.latencyMs,
-      ...(opts.costUsd !== undefined ? { costUsd: opts.costUsd } : {}),
-      ...(opts.metadata ? { metadata: this.buildMetadata(opts.metadata) } : {}),
-    });
+    this.emit(
+      {
+        eventType: "tool_call",
+        toolName: opts.toolName,
+        status: opts.status ?? "success",
+        latencyMs: opts.latencyMs,
+        ...(opts.costUsd !== undefined ? { costUsd: opts.costUsd } : {}),
+        ...(opts.metadata ? { metadata: this.buildMetadata(opts.metadata) } : {}),
+      },
+      opts.at,
+    );
   }
 
   captureStep(opts: CaptureStepOptions = {}): void {
-    this.emit({
-      eventType: "step_completed",
-      ...(opts.latencyMs !== undefined ? { latencyMs: opts.latencyMs } : {}),
-      ...(opts.metadata ? { metadata: this.buildMetadata(opts.metadata) } : {}),
-    });
+    this.emit(
+      {
+        eventType: "step_completed",
+        ...(opts.latencyMs !== undefined ? { latencyMs: opts.latencyMs } : {}),
+        ...(opts.metadata ? { metadata: this.buildMetadata(opts.metadata) } : {}),
+      },
+      opts.at,
+    );
   }
 
   captureError(opts: CaptureErrorOptions): void {
-    this.emit({
-      eventType: "error",
-      status: "failed",
-      errorType: opts.errorType,
-      ...(opts.message !== undefined ? { message: opts.message } : {}),
-      ...(opts.toolName !== undefined ? { toolName: opts.toolName } : {}),
-      ...(opts.latencyMs !== undefined ? { latencyMs: opts.latencyMs } : {}),
-      ...(opts.metadata ? { metadata: this.buildMetadata(opts.metadata) } : {}),
-    });
+    this.emit(
+      {
+        eventType: "error",
+        status: "failed",
+        errorType: opts.errorType,
+        ...(opts.message !== undefined ? { message: opts.message } : {}),
+        ...(opts.toolName !== undefined ? { toolName: opts.toolName } : {}),
+        ...(opts.latencyMs !== undefined ? { latencyMs: opts.latencyMs } : {}),
+        ...(opts.metadata ? { metadata: this.buildMetadata(opts.metadata) } : {}),
+      },
+      opts.at,
+    );
   }
 
   captureRetry(opts: CaptureRetryOptions): void {
-    this.emit({
-      eventType: "retry",
-      attempt: opts.attempt,
-      ...(opts.toolName !== undefined ? { toolName: opts.toolName } : {}),
-      ...(opts.status !== undefined ? { status: opts.status } : {}),
-      ...(opts.latencyMs !== undefined ? { latencyMs: opts.latencyMs } : {}),
-      ...(opts.metadata ? { metadata: this.buildMetadata(opts.metadata) } : {}),
-    });
+    this.emit(
+      {
+        eventType: "retry",
+        attempt: opts.attempt,
+        ...(opts.toolName !== undefined ? { toolName: opts.toolName } : {}),
+        ...(opts.status !== undefined ? { status: opts.status } : {}),
+        ...(opts.latencyMs !== undefined ? { latencyMs: opts.latencyMs } : {}),
+        ...(opts.metadata ? { metadata: this.buildMetadata(opts.metadata) } : {}),
+      },
+      opts.at,
+    );
   }
 
   /**
@@ -118,11 +137,14 @@ export class RunImpl implements Run {
   end(opts: EndRunOptions): void {
     if (this.ended) return;
     this.ended = true;
-    this.emit({
-      eventType: "run_completed",
-      status: opts.status,
-      ...(opts.output !== undefined ? { output: opts.output } : {}),
-    });
+    this.emit(
+      {
+        eventType: "run_completed",
+        status: opts.status,
+        ...(opts.output !== undefined ? { output: opts.output } : {}),
+      },
+      opts.at,
+    );
   }
 
   /**
@@ -140,13 +162,20 @@ export class RunImpl implements Run {
       string,
       unknown
     >,
+    at?: string | Date,
   ): void {
     const { metadata, ...rest } = payload;
+    const timestamp =
+      at === undefined
+        ? new Date().toISOString()
+        : typeof at === "string"
+          ? at
+          : at.toISOString();
     const event = {
       eventId: crypto.randomUUID(),
       traceId: this.ctx.traceId,
       runId: this.ctx.runId,
-      timestamp: new Date().toISOString(),
+      timestamp,
       agentName: this.ctx.agentName,
       userId: this.ctx.userId,
       stepIndex: this.nextStepIndex++,

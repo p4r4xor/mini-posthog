@@ -75,7 +75,7 @@ class AnalyticsClientImpl implements AnalyticsClient {
       userId: opts.userId,
       tags: opts.tags,
     });
-    return trace.startRun({ input: opts.input });
+    return trace.startRun({ input: opts.input, ...(opts.at !== undefined ? { at: opts.at } : {}) });
   }
 
   flush(): Promise<void> {

@@ -12,6 +12,15 @@ import type { CaptureEvent, Metadata } from "@ata/contracts";
 export type Tags = Record<string, unknown>;
 
 /**
+ * Optional explicit event timestamp. Defaults to "now" when omitted. Lets the
+ * caller log past events (replay/backfill, e.g. the benchmark simulator spreading
+ * traces over a historical window) while still going through the SDK.
+ */
+export interface TimestampOverride {
+  at?: string | Date;
+}
+
+/**
  * Called when events are permanently dropped: a non-retryable transport
  * failure (HTTP 4xx other than 429), retry budget exhausted, or backpressure
  * (queue full). `droppedEvents` is the batch/event that was discarded.
@@ -58,21 +67,21 @@ export interface StartTraceOptions {
   traceId?: string;
 }
 
-export interface StartRunOptions {
+export interface StartRunOptions extends TimestampOverride {
   input: string;
   /** Provide to correlate with an external id; generated if absent. */
   runId?: string;
 }
 
 /** Sugar: open a trace with a single run in one call. */
-export interface StartRunSugarOptions {
+export interface StartRunSugarOptions extends TimestampOverride {
   agentName: string;
   userId: string;
   input: string;
   tags?: Tags;
 }
 
-export interface CaptureLLMCallOptions {
+export interface CaptureLLMCallOptions extends TimestampOverride {
   model: string;
   latencyMs: number;
   inputTokens: number;
@@ -82,7 +91,7 @@ export interface CaptureLLMCallOptions {
   metadata?: Metadata;
 }
 
-export interface CaptureToolCallOptions {
+export interface CaptureToolCallOptions extends TimestampOverride {
   toolName: string;
   latencyMs: number;
   status?: "success" | "failed";
@@ -90,12 +99,12 @@ export interface CaptureToolCallOptions {
   metadata?: Metadata;
 }
 
-export interface CaptureStepOptions {
+export interface CaptureStepOptions extends TimestampOverride {
   latencyMs?: number;
   metadata?: Metadata;
 }
 
-export interface CaptureErrorOptions {
+export interface CaptureErrorOptions extends TimestampOverride {
   errorType: string;
   message?: string;
   toolName?: string;
@@ -103,7 +112,7 @@ export interface CaptureErrorOptions {
   metadata?: Metadata;
 }
 
-export interface CaptureRetryOptions {
+export interface CaptureRetryOptions extends TimestampOverride {
   attempt: number;
   toolName?: string;
   status?: "success" | "failed";
@@ -111,7 +120,7 @@ export interface CaptureRetryOptions {
   metadata?: Metadata;
 }
 
-export interface EndRunOptions {
+export interface EndRunOptions extends TimestampOverride {
   status: "success" | "failed";
   output?: string;
 }
