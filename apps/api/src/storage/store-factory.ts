@@ -1,5 +1,6 @@
 import type { EventStore, StorageEngine } from "@ata/contracts";
-import { DuckDBEventStore } from "./index.js";
+import { CLICKHOUSE_CONFIG } from "../config.js";
+import { ClickHouseEventStore, DuckDBEventStore } from "./index.js";
 
 /**
  * Options for constructing an EventStore. `path` is the DuckDB database file (or
@@ -27,7 +28,7 @@ export function createEventStore(
       return new DuckDBEventStore(path);
     }
     case "clickhouse":
-      throw new Error("ClickHouse adapter not yet wired (wave 3)");
+      return new ClickHouseEventStore(CLICKHOUSE_CONFIG);
     default: {
       const exhaustive: never = engine;
       throw new Error(`Unknown storage engine: ${String(exhaustive)}`);
