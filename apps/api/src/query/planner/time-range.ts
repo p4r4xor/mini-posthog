@@ -77,8 +77,22 @@ function yearFor(month: number, day: number, now: Date): number {
 /** Parse a single calendar date (UTC midnight) from a fragment, or null. */
 function parseDate(fragment: string, now: Date): number | null {
   const s = fragment.trim();
-  const isoM = s.match(/(\d{4})-(\d{2})-(\d{2})/);
-  if (isoM) return Date.UTC(Number(isoM[1]), Number(isoM[2]) - 1, Number(isoM[3]));
+
+  // ISO-ish, year first: YYYY-MM-DD / YYYY/MM/DD / YYYY.MM.DD
+  const ymd = s.match(/\b(\d{4})[./-](\d{1,2})[./-](\d{1,2})\b/);
+  if (ymd) return Date.UTC(Number(ymd[1]), Number(ymd[2]) - 1, Number(ymd[3]));
+
+  // Day/month-first numeric: DD/MM/YYYY (default) or MM/DD/YYYY (when unambiguous).
+  // Separators - / . — "20/06/2026" → 2026-06-20; "06/20/2026" → 2026-06-20.
+  const dmy = s.match(/\b(\d{1,2})[./-](\d{1,2})[./-](\d{4})\b/);
+  if (dmy) {
+    let day = Number(dmy[1]);
+    let mon = Number(dmy[2]);
+    const year = Number(dmy[3]);
+    if (mon > 12 && day <= 12) [day, mon] = [mon, day]; // clearly MM/DD → swap
+    if (mon < 1 || mon > 12 || day < 1 || day > 31) return null;
+    return Date.UTC(year, mon - 1, day);
+  }
 
   // "june 18" / "june 18th"
   const md = s.match(/\b([a-z]+)\.?\s+(\d{1,2})(?:st|nd|rd|th)?\b/);

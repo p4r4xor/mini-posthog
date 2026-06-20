@@ -47,6 +47,23 @@ describe("parseTimeRange", () => {
     });
   });
 
+  it("numeric dates: DD/MM/YYYY, MM/DD/YYYY, YYYY/MM/DD all resolve to the same day", () => {
+    const expected = {
+      from: "2026-06-20T00:00:00.000Z",
+      to: "2026-06-21T00:00:00.000Z",
+    };
+    expect(parseTimeRange("average steps per run by outcome on 20/06/2026", NOW)).toEqual(
+      expected,
+    );
+    expect(parseTimeRange("errors on 06/20/2026", NOW)).toEqual(expected); // unambiguous MM/DD
+    expect(parseTimeRange("errors on 2026/06/20", NOW)).toEqual(expected);
+    expect(parseTimeRange("errors on 2026-06-20", NOW)).toEqual(expected);
+    // different day → different window
+    expect(parseTimeRange("errors on 15/06/2026", NOW)?.from).toBe(
+      "2026-06-15T00:00:00.000Z",
+    );
+  });
+
   it("returns null when there is no time expression (so the default applies)", () => {
     expect(parseTimeRange("which tools fail the most", NOW)).toBeNull();
     expect(parseTimeRange("p95 LLM latency by model", NOW)).toBeNull();
