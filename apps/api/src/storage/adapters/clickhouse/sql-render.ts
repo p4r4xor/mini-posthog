@@ -76,17 +76,21 @@ const FILTER_OP_SQL = {
   lte: "<=",
 } as const;
 
-/** Time-bucket function per grain. */
-function bucketFn(grain: TimeGrain): string {
+/** Time-bucket expression per grain (col already resolved). */
+function bucketExpr(grain: TimeGrain, col: string): string {
   switch (grain) {
     case "second":
-      return "toStartOfSecond"; // requires DateTime64 — our timestamp column is
+      return `toStartOfSecond(${col})`; // needs DateTime64 — our timestamp is
     case "minute":
-      return "toStartOfMinute";
+      return `toStartOfMinute(${col})`;
     case "hour":
-      return "toStartOfHour";
+      return `toStartOfHour(${col})`;
     case "day":
-      return "toStartOfDay";
+      return `toStartOfDay(${col})`;
+    case "week":
+      return `toStartOfWeek(${col}, 1)`; // mode 1 = Monday, matches DuckDB ISO week
+    case "month":
+      return `toStartOfMonth(${col})`;
   }
 }
 
@@ -171,7 +175,7 @@ function renderGroupKeyExpr(
 ): string {
   if (key.kind === "timeBucket") {
     const col = resolveField(source, key.column);
-    return `${bucketFn(key.grain)}(${col}) AS \`${key.alias}\``;
+    return `${bucketExpr(key.grain, col)} AS \`${key.alias}\``;
   }
   const col = resolveField(source, key.column);
   return `${col} AS \`${key.alias}\``;
@@ -184,7 +188,7 @@ function renderGroupKeyBare(
 ): string {
   if (key.kind === "timeBucket") {
     const col = resolveField(source, key.column);
-    return `${bucketFn(key.grain)}(${col})`;
+    return `${bucketExpr(key.grain, col)}`;
   }
   return resolveField(source, key.column);
 }

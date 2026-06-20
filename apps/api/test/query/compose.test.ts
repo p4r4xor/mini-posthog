@@ -67,9 +67,18 @@ describe("composePlan — broad slot-based coverage (beyond the catalog)", () =>
     expect(p.sort).toEqual({ by: "time", dir: "asc" });
   });
 
-  it("supports second-level granularity: 'per second'", async () => {
-    const p = await plan("average LLM latency by model per second");
-    expect(p.dimensions).toContainEqual({ time: "second" });
+  it("supports all time grains: second / minute / hour / day / week / month", async () => {
+    const cases: Array<[string, string]> = [
+      ["average LLM latency by model per second", "second"],
+      ["average LLM latency by model per minute", "minute"],
+      ["average LLM latency by model per day", "day"],
+      ["average LLM latency by model per week", "week"],
+      ["average LLM latency by model per month", "month"],
+    ];
+    for (const [nl, grain] of cases) {
+      const p = await plan(nl);
+      expect(p.dimensions).toContainEqual({ time: grain });
+    }
   });
 
   it("which models cost the most → ranking: sum(costUsd) by model desc, limited", async () => {
