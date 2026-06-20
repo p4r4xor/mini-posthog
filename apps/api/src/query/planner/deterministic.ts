@@ -1,5 +1,5 @@
 import type { QueryPlan } from "@ata/contracts";
-import { composePlan } from "./compose.js";
+import { composePlan, detectGrain } from "./compose.js";
 import type { PlanContext } from "./types.js";
 
 /**
@@ -57,12 +57,12 @@ const percentileLatency: Template = (text, ctx) => {
 
   const byModel = has(text, "model");
   const byTool = has(text, "tool");
-  const overTime = hasAny(text, "over time", /per (hour|day|minute)/, "trend");
+  const grain = detectGrain(text); // respects per second/minute/hour/day/week/month
 
   const dimensions: QueryPlan["dimensions"] = [];
   if (byModel) dimensions.push("model");
   if (byTool) dimensions.push("toolName");
-  if (overTime) dimensions.push({ time: "hour" });
+  if (grain) dimensions.push({ time: grain });
 
   const eventType = byTool && !byModel ? "tool_call" : "llm_call";
 
@@ -72,28 +72,35 @@ const percentileLatency: Template = (text, ctx) => {
     dimensions,
     filters: [{ field: "eventType", op: "eq", value: eventType }],
     timeRange: ctx.timeRange,
-    sort: overTime ? { by: "time", dir: "asc" } : { by: "metric", dir: "desc" },
-    chartHint: overTime ? "line" : "bar",
+    sort: grain ? { by: "time", dir: "asc" } : { by: "metric", dir: "desc" },
+    chartHint: grain ? "line" : "bar",
   };
 };
 
-/** Avg LLM latency by model over time → event, avg(latencyMs), [model, time(hour)], line. */
+/** Avg LLM latency by model over time → event, avg(latencyMs), [model, time(grain)], line. */
 const avgLlmLatencyByModelOverTime: Template = (text, ctx) => {
   const isLatency = hasAny(text, "latency", "latencies");
   const byModel = has(text, "model");
-  const overTime = hasAny(
+  const grain = detectGrain(text); // honors the requested grain, not just hour
+  // Only the AVG-over-time shape; max/min/percentile route to the composer.
+  const isOtherAgg = hasAny(
     text,
-    "over time",
-    "time series",
-    "timeseries",
-    "trend",
-    /per (hour|day|minute)/,
+    "max",
+    "maximum",
+    "min",
+    "minimum",
+    "slowest",
+    "fastest",
+    "highest",
+    "lowest",
+    "longest",
+    "shortest",
   );
-  if (isLatency && byModel && overTime) {
+  if (isLatency && byModel && grain && !isOtherAgg) {
     return {
       level: "event",
       metric: { agg: "avg", field: "latencyMs" },
-      dimensions: ["model", { time: "hour" }],
+      dimensions: ["model", { time: grain }],
       filters: [{ field: "eventType", op: "eq", value: "llm_call" }],
       timeRange: ctx.timeRange,
       sort: { by: "time", dir: "asc" },

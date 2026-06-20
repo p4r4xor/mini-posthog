@@ -92,8 +92,8 @@ function detectCategorical(t: string): Dimension | null {
   return null;
 }
 
-/** Time-bucket grain, if the question asks for a time series. */
-function detectGrain(
+/** Time-bucket grain, if the question asks for a time series. Shared with templates. */
+export function detectGrain(
   t: string,
 ): "second" | "minute" | "hour" | "day" | "week" | "month" | null {
   if (has(t, "per second", "by second", "each second", "secondly")) return "second";

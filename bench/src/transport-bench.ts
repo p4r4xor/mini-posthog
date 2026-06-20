@@ -170,14 +170,12 @@ async function grpcThroughput(
     ata: { capture: { v1: { IngestService: { service: grpc.ServiceDefinition } } } };
   };
   const svc = pkg.ata.capture.v1.IngestService.service;
-  let count = 0;
   const server = new grpc.Server();
   server.addService(svc, {
     Capture: (
       call: grpc.ServerUnaryCall<{ events: unknown[] }, unknown>,
       cb: grpc.sendUnaryData<unknown>,
     ) => {
-      count += call.request.events.length;
       cb(null, { accepted: call.request.events.length, duplicates: 0, rejected: 0 });
     },
     CaptureStream: (
@@ -187,7 +185,6 @@ async function grpcThroughput(
       let n = 0;
       call.on("data", () => n++);
       call.on("end", () => {
-        count += n;
         cb(null, { accepted: n, duplicates: 0, rejected: 0 });
       });
     },
