@@ -1,0 +1,134 @@
+[
+  {
+    "eventId": "evt_001",
+    "traceId": "trace_research_001",
+    "runId": "run_research_001",
+    "timestamp": "2026-05-07T09:12:30.123Z",
+    "agentName": "research-agent",
+    "userId": "user_42",
+    "eventType": "trace_started",
+    "stepIndex": 0,
+    "model": null,
+    "toolName": null,
+    "status": "running",
+    "latencyMs": null,
+    "inputTokens": null,
+    "outputTokens": null,
+    "costUsd": null,
+    "errorType": null,
+    "metadata": {
+      "input": "Find pricing for sandbox providers",
+      "tags": ["pricing", "research"]
+    }
+  },
+  {
+    "eventId": "evt_002",
+    "traceId": "trace_research_001",
+    "runId": "run_research_001",
+    "timestamp": "2026-05-07T09:12:32.041Z",
+    "agentName": "research-agent",
+    "userId": "user_42",
+    "eventType": "llm_call",
+    "stepIndex": 1,
+    "model": "gpt-5.2",
+    "toolName": null,
+    "status": "success",
+    "latencyMs": 842,
+    "inputTokens": 1200,
+    "outputTokens": 310,
+    "costUsd": 0.0142,
+    "errorType": null,
+    "metadata": {
+      "route": "planning",
+      "tags": ["pricing", "research"]
+    }
+  },
+  {
+    "eventId": "evt_003",
+    "traceId": "trace_research_001",
+    "runId": "run_research_001",
+    "timestamp": "2026-05-07T09:12:34.412Z",
+    "agentName": "research-agent",
+    "userId": "user_42",
+    "eventType": "tool_call",
+    "stepIndex": 2,
+    "model": null,
+    "toolName": "web_search",
+    "status": "success",
+    "latencyMs": 1200,
+    "inputTokens": null,
+    "outputTokens": null,
+    "costUsd": null,
+    "errorType": null,
+    "metadata": {
+      "query": "sandbox provider pricing",
+      "tags": ["pricing", "research"]
+    }
+  },
+  {
+    "eventId": "evt_004",
+    "traceId": "trace_research_001",
+    "runId": "run_research_001",
+    "timestamp": "2026-05-07T09:12:37.018Z",
+    "agentName": "research-agent",
+    "userId": "user_42",
+    "eventType": "error",
+    "stepIndex": 3,
+    "model": null,
+    "toolName": "web_fetch",
+    "status": "failed",
+    "latencyMs": 603,
+    "inputTokens": null,
+    "outputTokens": null,
+    "costUsd": null,
+    "errorType": "rate_limit",
+    "metadata": {
+      "message": "Provider returned 429",
+      "tags": ["pricing", "research"]
+    }
+  },
+  {
+    "eventId": "evt_005",
+    "traceId": "trace_research_001",
+    "runId": "run_research_001",
+    "timestamp": "2026-05-07T09:12:38.225Z",
+    "agentName": "research-agent",
+    "userId": "user_42",
+    "eventType": "retry",
+    "stepIndex": 4,
+    "model": null,
+    "toolName": "web_fetch",
+    "status": "success",
+    "latencyMs": 977,
+    "inputTokens": null,
+    "outputTokens": null,
+    "costUsd": null,
+    "errorType": null,
+    "metadata": {
+      "attempt": 2,
+      "tags": ["pricing", "research"]
+    }
+  },
+  {
+    "eventId": "evt_006",
+    "traceId": "trace_research_001",
+    "runId": "run_research_001",
+    "timestamp": "2026-05-07T09:12:42.810Z",
+    "agentName": "research-agent",
+    "userId": "user_42",
+    "eventType": "trace_completed",
+    "stepIndex": 5,
+    "model": null,
+    "toolName": null,
+    "status": "success",
+    "latencyMs": 12687,
+    "inputTokens": null,
+    "outputTokens": null,
+    "costUsd": 0.0142,
+    "errorType": null,
+    "metadata": {
+      "output": "Completed research summary",
+      "tags": ["pricing", "research"]
+    }
+  }
+]

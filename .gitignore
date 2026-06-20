@@ -1,0 +1,28 @@
+# deps
+node_modules/
+.pnpm-store/
+
+# build
+dist/
+build/
+*.tsbuildinfo
+
+# env / secrets
+.env
+.env.*
+!.env.example
+
+# data / engines (large local datasets, db files)
+*.duckdb
+*.duckdb.wal
+data/
+*.parquet
+clickhouse-data/
+
+# logs / os
+*.log
+.DS_Store
+
+# editor
+.vscode/
+.idea/
