@@ -10,6 +10,7 @@ import { LocalBlobStore } from "./blob/local-blob-store.js";
 import {
   API_PORT,
   BLOB_DIR,
+  GRPC_PORT,
   MAX_QUEUE_DEPTH,
   QUEUE_KIND,
   REDIS_URL,
@@ -17,6 +18,7 @@ import {
   WORKER_BATCH_MS,
   WORKER_BATCH_SIZE,
 } from "./config.js";
+import { startGrpcServer } from "./grpc/server.js";
 import { buildApp } from "./http/app.js";
 import { IngestionService } from "./ingestion/ingestion-service.js";
 import { createQueue } from "./ingestion/queue/queue-factory.js";
@@ -48,8 +50,12 @@ async function main(): Promise<void> {
     blob,
   });
 
+  // gRPC ingestion transport (binary) in front of the same IngestionService.
+  const grpc = await startGrpcServer(ingestion, GRPC_PORT);
+
   const shutdown = async (): Promise<void> => {
     workerAbort.abort();
+    grpc.server.forceShutdown();
     await app.close();
     await queue.close();
     await store.close();
@@ -60,7 +66,7 @@ async function main(): Promise<void> {
 
   await app.listen({ port: API_PORT, host: "0.0.0.0" });
   console.log(
-    `[ata/api] listening on :${API_PORT} (engine=${STORAGE_ENGINE}, queue=${QUEUE_KIND})`,
+    `[ata/api] HTTP :${API_PORT}  gRPC :${grpc.port}  (engine=${STORAGE_ENGINE}, queue=${QUEUE_KIND})`,
   );
 }
 

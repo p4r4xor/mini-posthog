@@ -25,6 +25,9 @@ export const STORAGE_ENGINE: StorageEngine =
 
 export const API_PORT = Number(process.env.ATA_PORT ?? 3000);
 
+/** gRPC ingestion port (binary transport in front of the same IngestionService). */
+export const GRPC_PORT = Number(process.env.ATA_GRPC_PORT ?? 50051);
+
 /** ClickHouse connection (matches docker-compose.yml; overridable via env). */
 export interface ClickHouseConfig {
   url: string;

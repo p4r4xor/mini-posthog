@@ -1,0 +1,64 @@
+syntax = "proto3";
+
+// Own-protobuf ingestion contract (docs/architecture.md §12). This is the binary,
+// schema-enforced wire for high-throughput server SDKs — an alternative transport
+// in front of the SAME IngestionService as HTTP /capture. Not full OTLP (no OTel
+// span remodel); it mirrors our CaptureEvent.
+package ata.capture.v1;
+
+enum EventType {
+  EVENT_TYPE_UNSPECIFIED = 0;
+  RUN_STARTED = 1;
+  LLM_CALL = 2;
+  TOOL_CALL = 3;
+  STEP_COMPLETED = 4;
+  ERROR = 5;
+  RETRY = 6;
+  RUN_COMPLETED = 7;
+}
+
+// A flat event mirroring the wire CaptureEvent. Type-specific fields are optional;
+// the server maps to the right variant and re-validates with the Zod contract, so
+// only fields valid for the eventType are kept.
+message Event {
+  string event_id = 1;
+  string trace_id = 2;
+  string run_id = 3;
+  string timestamp = 4; // ISO-8601
+  string agent_name = 5;
+  string user_id = 6;
+  uint32 step_index = 7;
+  EventType event_type = 8;
+
+  string status = 9;      // "" = unset
+  string model = 10;
+  string tool_name = 11;
+  string error_type = 12;
+  string message = 13;
+  string input = 14;      // payload (run_started)
+  string output = 15;     // payload (run_completed)
+
+  optional double latency_ms = 16;
+  optional uint32 input_tokens = 17;
+  optional uint32 output_tokens = 18;
+  optional double cost_usd = 19;
+  optional uint32 attempt = 20;
+
+  string metadata_json = 21; // arbitrary metadata as a JSON string (tags, etc.)
+}
+
+message CaptureRequest { repeated Event events = 1; }
+
+message CaptureResponse {
+  uint32 accepted = 1;
+  uint32 duplicates = 2;
+  uint32 rejected = 3;
+}
+
+service IngestService {
+  // Unary batch — the simple path.
+  rpc Capture(CaptureRequest) returns (CaptureResponse);
+  // Client-streaming — the SDK streams events over one HTTP/2 call; the server
+  // applies HTTP/2 flow control as transport-level backpressure.
+  rpc CaptureStream(stream Event) returns (CaptureResponse);
+}

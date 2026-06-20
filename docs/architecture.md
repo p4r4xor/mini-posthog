@@ -462,6 +462,12 @@ SDK ─HTTP {events}─▶ POST /capture ─▶ IngestionService ─▶ EventQue
                          └─ externalize payload ─▶ BlobStore (S3/FS)     ▼  return 202 / 429
 ```
 
+**Two transports, one spine.** Events arrive over either **HTTP** (`POST /capture`,
+JSON — browsers/debug) or **gRPC** (`IngestService.Capture` unary + `CaptureStream`
+client-streaming, binary protobuf — high-throughput server SDKs; auth via `x-api-key`
+metadata). Both map to wire `CaptureEvent`s and call the **same**
+`IngestionService.capture(...)` — see §16 for the gRPC-vs-HTTP rationale.
+
 - **`POST /capture`** — `x-api-key` → `projectId` (401 if unknown). Validates each
   `CaptureEvent` (per-event partial success). **Externalizes payload** (top-level
   `input`/`output` text → BlobStore, replaced by a small `metadata.payloadRef`).
@@ -635,13 +641,17 @@ gate + CI. API on Fastify. Web on React 19 + Vite 8 + Recharts. DuckDB via
 
 Honest accounting of what is **not** built, why, and what it would take.
 
+**Built since first draft:** the async ingestion spine (queue + worker + 429),
+payload externalization, NL time-range parsing + the slot composer, the 1M
+benchmark, and **gRPC ingestion** (own-protobuf `Capture` + `CaptureStream`,
+alongside HTTP — §12/§16).
+
 **Next up (highest signal):**
-- **gRPC / OTLP transport** in front of `/capture` (own-protobuf). The Redis/worker
-  half of the spine is built; the wire is still HTTP/JSON. Slots in as a gRPC
-  `Capture` service that calls the same `IngestionService` — nothing downstream
-  changes.
 - **AggregatingMergeTree materialized views** for time-series/rollups. `runs`/`traces`
   are query-time views today; at 1B/day dashboards must read incremental MVs. (§7)
+- **Full OTLP compatibility** — our gRPC is own-protobuf; speaking OTLP/GenAI
+  conventions would unlock the OpenTelemetry instrumentation ecosystem (a remodel,
+  not a transport swap).
 
 **Production hardening (documented, would swap an adapter):**
 - **Kafka/Redpanda** behind `EventQueue`; **S3** behind `BlobStore`; cold **Parquet**
