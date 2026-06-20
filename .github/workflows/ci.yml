@@ -1,0 +1,41 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  gate:
+    runs-on: ubuntu-latest
+    # The ClickHouse adapter tests run against a real server.
+    services:
+      clickhouse:
+        image: clickhouse/clickhouse-server:26.5
+        ports:
+          - 8123:8123
+          - 9000:9000
+        env:
+          CLICKHOUSE_DB: ata
+          CLICKHOUSE_USER: ata
+          CLICKHOUSE_PASSWORD: ata
+          CLICKHOUSE_DEFAULT_ACCESS_MANAGEMENT: "1"
+        options: >-
+          --health-cmd "wget --no-verbose --tries=1 --spider http://localhost:8123/ping || exit 1"
+          --health-interval 5s --health-timeout 3s --health-retries 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm lint
+      - run: pnpm typecheck
+      - run: pnpm test
+        env:
+          ATA_CH_URL: http://localhost:8123
+          ATA_CH_USER: ata
+          ATA_CH_PASSWORD: ata
+          ATA_CH_DATABASE: ata

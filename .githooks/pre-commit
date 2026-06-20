@@ -1,0 +1,11 @@
+#!/bin/sh
+# Pre-commit gate: fast, self-contained checks that catch type + lint issues
+# regardless of editor state (the editor's TS server can go stale; this can't).
+# Tests are NOT run here because the ClickHouse adapter tests need Docker — run
+# the full gate with `pnpm check` (or let CI do it).
+set -e
+echo "[pre-commit] biome lint…"
+pnpm lint
+echo "[pre-commit] typecheck…"
+pnpm typecheck
+echo "[pre-commit] ok"
