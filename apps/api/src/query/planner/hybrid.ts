@@ -1,6 +1,7 @@
 import { QueryPlan, type TimeRange } from "@ata/contracts";
 import { matchDeterministic } from "./deterministic.js";
 import { defaultLlmPlanner } from "./llm.js";
+import { parseTimeRange } from "./time-range.js";
 import {
   type PlanContext,
   type PlanOptions,
@@ -25,8 +26,16 @@ function reject(reason: string): PlanResult {
   return { ok: false, reason, supported: [...SUPPORTED_QUESTIONS] };
 }
 
-/** Resolve the time window: explicit override, else `now − lookback → now`. */
-function resolveTimeRange(opts: PlanOptions, now: Date): TimeRange {
+/**
+ * Resolve the time window, in precedence order:
+ *   1. a time expression parsed from the question itself ("on 18th June",
+ *      "last 24 hours") — the user was explicit, so it wins;
+ *   2. an explicit `opts.timeRange` (e.g. a UI time picker);
+ *   3. the default `now − lookback → now`.
+ */
+function resolveTimeRange(nl: string, opts: PlanOptions, now: Date): TimeRange {
+  const fromNl = parseTimeRange(nl, now);
+  if (fromNl) return fromNl;
   if (opts.timeRange) return opts.timeRange;
   const days = opts.defaultLookbackDays ?? DEFAULT_LOOKBACK_DAYS;
   const from = new Date(now.getTime() - days * 24 * 60 * 60 * 1000);
@@ -41,7 +50,7 @@ function resolveTimeRange(opts: PlanOptions, now: Date): TimeRange {
  */
 export async function planQuery(nl: string, opts: PlanOptions = {}): Promise<PlanResult> {
   const now = opts.now ?? new Date();
-  const timeRange = resolveTimeRange(opts, now);
+  const timeRange = resolveTimeRange(nl, opts, now);
   const ctx: PlanContext = { now, timeRange };
 
   // 1) Deterministic templates first.
