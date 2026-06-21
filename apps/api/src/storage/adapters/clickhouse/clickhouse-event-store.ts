@@ -95,14 +95,22 @@ export class ClickHouseEventStore implements EventStore {
     const uniqueRows = [...byId.values()];
 
     // Which of these event_ids already exist? (cheap: bloom-filter skip index + PK).
+    // Chunk the id lookup: a whole worker batch of ids in one query param overflows
+    // ClickHouse's HTTP form-field limit ("Field value too long"), which silently
+    // failed batches at scale. 1000 ids per query keeps us well under the limit.
     const ids = [...byId.keys()];
-    const existing = await client.query({
-      query: `SELECT DISTINCT event_id FROM events WHERE event_id IN {ids:Array(String)}`,
-      query_params: { ids },
-      format: "JSONEachRow",
-    });
-    const existingRows = await existing.json<{ event_id: string }>();
-    const existingIds = new Set(existingRows.map((r) => r.event_id));
+    const existingIds = new Set<string>();
+    const LOOKUP_CHUNK = 1000;
+    for (let i = 0; i < ids.length; i += LOOKUP_CHUNK) {
+      const chunk = ids.slice(i, i + LOOKUP_CHUNK);
+      const existing = await client.query({
+        query: `SELECT DISTINCT event_id FROM events WHERE event_id IN {ids:Array(String)}`,
+        query_params: { ids: chunk },
+        format: "JSONEachRow",
+      });
+      for (const r of await existing.json<{ event_id: string }>())
+        existingIds.add(r.event_id);
+    }
 
     const toInsert = uniqueRows.filter((r) => !existingIds.has(r.eventId));
 
